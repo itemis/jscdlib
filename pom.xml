@@ -12,7 +12,7 @@
     </parent>
     
     <artifactId>jscdlib</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -39,19 +39,14 @@
         </developer>
     </developers>
 
-    <url>https://github.com/JanMosigItemis/jscdlib</url>
+    <url>https://github.com/itemis/jscdlib</url>
 
     <scm>
-        <connection>scm:git:https://github.com/JanMosigItemis/jscdlib</connection>
-        <developerConnection>scm:git:https://github.com/JanMosigItemis/jscdlib</developerConnection>
+        <connection>scm:git:https://github.com/itemis/jscdlib</connection>
+        <developerConnection>scm:git:https://github.com/itemis/jscdlib</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/JanMosigItemis/jscdlib</url>
+        <url>https://github.com/itemis/jscdlib</url>
     </scm>
-
-    <organization>
-		<name>itemis AG</name>
-		<url>www.itemis.com</url>
-	</organization>
 
     <properties>
         <java.version>16</java.version>
