@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>jscdlib.demo</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.0.1</version>
 
     <name>jScdLib Demo</name>
     <description>Demonstration of jScdLib</description>
@@ -40,19 +40,14 @@
         </developer>
     </developers>
 
-    <url>https://github.com/JanMosigItemis/jscdlib</url>
+    <url>https://github.com/itemis/jscdlib</url>
 
     <scm>
-        <connection>scm:git:https://github.com/JanMosigItemis/jscdlib</connection>
-        <developerConnection>scm:git:https://github.com/JanMosigItemis/jscdlib</developerConnection>
+        <connection>scm:git:https://github.com/itemis/jscdlib</connection>
+        <developerConnection>scm:git:https://github.com/itemis/jscdlib</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/JanMosigItemis/jscdlib</url>
+        <url>https://github.com/itemis/jscdlib</url>
     </scm>
-
-    <organization>
-        <name>itemis AG</name>
-        <url>www.itemis.com</url>
-    </organization>
 
     <properties>
         <java.version>16</java.version>
