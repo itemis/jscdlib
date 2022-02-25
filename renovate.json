@@ -1,5 +1,27 @@
 {
     "extends": [
-        "config:base"
+        "config:base",
+        ":rebaseStalePrs"
+    ],
+    "baseBranches": [
+        "develop"
+    ],
+    "timezone": "Europe/Berlin",
+    "schedule": [
+        "after 1pm every thursday"
+    ],
+    "packageRules": [
+        {
+            "matchDatasources": [
+                "pom.xml"
+            ],
+            "stabilityDays": 3
+        },
+        {
+            "matchPackageNames": [
+                "com.itemis:jscdlib"
+            ],
+            "enabled": false
+        }
     ]
 }
