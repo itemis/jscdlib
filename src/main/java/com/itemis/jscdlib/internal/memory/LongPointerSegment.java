@@ -15,8 +15,8 @@ public class LongPointerSegment extends PointerSegment<Long> {
 
     @Override
     public Long dereference() {
-        try (var scope = ResourceScope.newConfinedScope()) {
-            var longSeg = new LongSegment(getContainedAddress(), scope);
+        try (var localScope = ResourceScope.newConfinedScope()) {
+            var longSeg = new LongSegment(getContainedAddress(), localScope);
             return longSeg.getValue();
         }
     }

@@ -10,8 +10,8 @@ public class IntPointerSegment extends PointerSegment<Integer> {
 
     @Override
     public Integer dereference() {
-        try (var scope = ResourceScope.newConfinedScope()) {
-            var intSeg = new IntSegment(getContainedAddress(), scope);
+        try (var localScope = ResourceScope.newConfinedScope()) {
+            var intSeg = new IntSegment(getContainedAddress(), localScope);
             return intSeg.getValue();
         }
     }
