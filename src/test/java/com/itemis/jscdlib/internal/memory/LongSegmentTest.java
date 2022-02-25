@@ -1,5 +1,6 @@
 package com.itemis.jscdlib.internal.memory;
 
+import static jdk.incubator.foreign.MemorySegment.allocateNative;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,52 +10,56 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jdk.incubator.foreign.MemoryLayouts;
+import jdk.incubator.foreign.ResourceScope;
+
 public class LongSegmentTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(LongSegmentTest.class);
+
+    private ResourceScope testMemoryScope;
 
     private LongSegment underTest;
 
     @BeforeEach
     public void setUp() {
-        underTest = new LongSegment();
+        testMemoryScope = ResourceScope.newConfinedScope();
+        underTest = new LongSegment(testMemoryScope);
     }
 
     @AfterEach
     public void tearDown() {
-        if (underTest.isAlive()) {
+        if (testMemoryScope != null && testMemoryScope.isAlive()) {
             try {
-                underTest.close();
+                testMemoryScope.close();
             } catch (Exception e) {
-                LOG.warn("Possible ressource leak. Could not close segment handle.", e);
+                LOG.warn("Possible ressource leak. Could not close test memory scope.", e);
             }
         }
     }
 
     @Test
     public void initial_value_is_minus_one() {
-        try (var cut = new LongSegment()) {
-            assertThat(cut.getValue()).isEqualTo(-1L);
-        }
+        var cut = new LongSegment(testMemoryScope);
+        assertThat(cut.getValue()).isEqualTo(-1L);
     }
 
     @Test
     public void wrap_wraps_provided_segment() {
-        var expectedVal = 123L;
-        underTest.setValue(expectedVal);
-        try (var wrappingSeg = new LongSegment(underTest)) {
-            assertThat(wrappingSeg.getSegment()).isSameAs(underTest);
-        }
+        var testSeg = allocateNative(MemoryLayouts.JAVA_LONG, testMemoryScope);
+
+        var wrappingSeg = new LongSegment(testSeg);
+        assertThat(wrappingSeg.address()).isEqualTo(testSeg.address());
     }
 
     @Test
     public void wrap_wraps_provided_addr() {
         var expectedVal = 123L;
         underTest.setValue(expectedVal);
-        try (var wrappingSeg = new LongSegment(underTest.address())) {
-            assertThat(wrappingSeg.getValue()).isEqualTo(expectedVal);
-            assertThat(wrappingSeg.address()).isEqualTo(underTest.address());
-        }
+
+        var wrappingSeg = new LongSegment(underTest.address(), testMemoryScope);
+        assertThat(wrappingSeg.getValue()).isEqualTo(expectedVal);
+        assertThat(wrappingSeg.address()).isEqualTo(underTest.address());
     }
 
     @Test
@@ -84,7 +89,7 @@ public class LongSegmentTest {
     @Test
     public void constructor_accepts_initial_value() {
         var expectedVal = 123L;
-        underTest = new LongSegment(expectedVal);
+        underTest = new LongSegment(expectedVal, testMemoryScope);
         assertThat(underTest.getValue()).isEqualTo(expectedVal);
     }
 }

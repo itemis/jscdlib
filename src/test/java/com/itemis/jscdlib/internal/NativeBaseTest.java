@@ -4,10 +4,10 @@ import static com.itemis.fluffyj.tests.exceptions.ExpectedExceptions.EXPECTED_CH
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.itemis.jscdlib.problem.JScdException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.itemis.jscdlib.problem.JScdException;
 
 public class NativeBaseTest {
 

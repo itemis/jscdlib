@@ -5,39 +5,31 @@ import static java.util.Objects.requireNonNull;
 
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
-public class StringSegment extends MemorySegmentDelegate implements ValueSegment<String> {
+public class StringSegment extends TypedMemorySegment<String> {
 
     private static final String INITIAL_VALUE = "";
 
-    public StringSegment() {
-        super(CLinker.toCString(INITIAL_VALUE, UTF_8));
+    public StringSegment(MemoryAddress addrOfInitialValueSeg, ResourceScope scope) {
+        super(addrOfInitialValueSeg, CLinker.toJavaString(addrOfInitialValueSeg).getBytes(UTF_8).length + 1, scope);
     }
 
-    public StringSegment(MemoryAddress addrOfInitialValueSeg) {
-        super(addrOfInitialValueSeg, CLinker.toJavaStringRestricted(addrOfInitialValueSeg).getBytes(UTF_8).length + 1);
+    public StringSegment(String initialValue, ResourceScope scope) {
+        super(CLinker.toCString(requireNonNull(initialValue, "initialValue"), requireNonNull(scope, "scope")));
     }
 
-    public StringSegment(MemorySegment initialValueSeg) {
-        super(initialValueSeg);
-    }
-
-    public StringSegment(String initialValue) {
-        super(CLinker.toCString(requireNonNull(initialValue, "initialValue"), UTF_8));
+    public StringSegment(ResourceScope scope) {
+        this(INITIAL_VALUE, scope);
     }
 
     @Override
     public final String getValue() {
-        return CLinker.toJavaString(getSegment(), UTF_8);
+        return CLinker.toJavaString(address());
     }
 
-    @Override
-    public final String setValue(String newValue) {
+    public final StringSegment withValue(String newValue) {
         requireNonNull(newValue, "newValue");
-        var oldVal = getValue();
-        close();
-        setSegment(CLinker.toCString(newValue, UTF_8));
-        return oldVal;
+        return new StringSegment(newValue, scope);
     }
 }

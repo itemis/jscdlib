@@ -2,47 +2,40 @@ package com.itemis.jscdlib.internal.memory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
 public class IntPointerSegmentTest {
 
-    private List<MemorySegment> allocatedSegs;
+    private ResourceScope myScope;
 
     @BeforeEach
     public void setUp() {
-        allocatedSegs = new ArrayList<>();
+        myScope = ResourceScope.newConfinedScope();
     }
 
     @AfterEach
     public void tearDown() {
-        allocatedSegs.forEach(seg -> {
-            if (seg.isAlive()) {
-                seg.close();
-            }
-        });
+        if (myScope.isAlive()) {
+            myScope.close();
+        }
     }
 
     @Test
     public void dereference_string_seg_usecase() {
-        try (var intSeg = new IntSegment()) {
-            var underTest = allocatePtrSeg();
-            var expectedValue = 123;
-            intSeg.setValue(expectedValue);
+        var intSeg = new IntSegment(myScope);
+        var underTest = allocatePtrSeg();
+        var expectedValue = 123;
+        intSeg.setValue(expectedValue);
 
-            underTest.pointTo(intSeg.address());
+        underTest.pointTo(intSeg);
 
-            assertThat(underTest.dereference()).isEqualTo(expectedValue);
-        }
+        assertThat(underTest.dereference()).isEqualTo(expectedValue);
     }
 
     @Test
@@ -57,35 +50,16 @@ public class IntPointerSegmentTest {
         var thisSegHoldsTheValue = allocateSeg();
         thisSegHoldsTheValue.setValue(expectedValue);
         var thisSegHoldsTheAddr = allocatePtrSeg();
-        thisSegHoldsTheAddr.setValue(thisSegHoldsTheValue.address().toRawLongValue());
-        var underTest = allocatePtrSeg(thisSegHoldsTheAddr.address());
+        thisSegHoldsTheAddr.pointTo(thisSegHoldsTheValue);
 
-        assertThat(underTest.dereference()).isEqualTo(expectedValue);
-    }
-
-    @Test
-    public void test_constructor_with_addr() {
-        long addr = 123L;
-        MemoryAddress expectedAddr = MemoryAddress.ofLong(addr);
-        var underTest = allocatePtrSeg(expectedAddr);
-        assertThat(underTest.address()).isEqualTo(expectedAddr);
+        assertThat(thisSegHoldsTheAddr.dereference()).isEqualTo(expectedValue);
     }
 
     private IntSegment allocateSeg() {
-        var result = new IntSegment();
-        allocatedSegs.add(result);
-        return result;
+        return new IntSegment(myScope);
     }
 
     private IntPointerSegment allocatePtrSeg() {
-        var result = new IntPointerSegment();
-        allocatedSegs.add(result);
-        return result;
-    }
-
-    private IntPointerSegment allocatePtrSeg(MemoryAddress addr) {
-        var result = new IntPointerSegment(addr);
-        allocatedSegs.add(result);
-        return result;
+        return new IntPointerSegment(myScope);
     }
 }

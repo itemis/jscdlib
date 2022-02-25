@@ -5,39 +5,40 @@ import static java.util.Objects.requireNonNull;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
-public class IntSegment extends MemorySegmentDelegate implements ValueSegment<Integer> {
+public class IntSegment extends TypedMutableMemorySegment<Integer> {
 
     private static final int DEFAULT_VALUE = -1;
 
-    public IntSegment() {
-        super(MemorySegment.allocateNative(MemoryLayouts.JAVA_INT));
+    public IntSegment(ResourceScope scope) {
+        super(MemoryLayouts.JAVA_INT, scope);
         setValue(DEFAULT_VALUE);
     }
 
-    public IntSegment(MemoryAddress addr) {
-        super(addr, MemoryLayouts.JAVA_INT.byteSize());
+    public IntSegment(MemoryAddress addr, ResourceScope scope) {
+        super(addr, MemoryLayouts.JAVA_INT.byteSize(), scope);
     }
 
-    public IntSegment(MemorySegment segment) {
-        super(segment);
+    public IntSegment(MemorySegment seg) {
+        super(seg);
     }
 
-    public IntSegment(int initialValue) {
-        this();
+    public IntSegment(int initialValue, ResourceScope scope) {
+        this(scope);
         setValue(initialValue);
     }
 
     @Override
-    public final Integer getValue() {
-        return getBuf().getInt();
+    public Integer getValue() {
+        return getReadOnlyBuf().getInt();
     }
 
     @Override
-    public final Integer setValue(Integer newValue) {
+    public Integer setValue(Integer newValue) {
         requireNonNull(newValue, "newValue");
-        var oldVal = getBuf().getInt();
-        getBuf().putInt(newValue);
+        var oldVal = getValue();
+        getWriteableBuf().putInt(newValue);
         return oldVal;
     }
 }

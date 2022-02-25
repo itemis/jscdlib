@@ -3,15 +3,15 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_INT;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.itemis.jscdlib.AssuanLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNative {
 
@@ -75,25 +75,21 @@ public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNat
         return callNativeFunction(() -> assuanTransact.call(ctx, command, data_cb, data_cb_arg, inquire_cb, inquire_cb_arg, status_cb, status_cb_arg));
     }
 
-    private final LibraryLookup loadLib() {
-        LibraryLookup libCandidate = null;
-
-        // See
-        // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
+    private final SymbolLookup loadLib() {
         try {
-            libCandidate = LibraryLookup.ofLibrary("libpcsclite.so.1");
-        } catch (IllegalArgumentException outerE) {
+            System.loadLibrary("libassuan.so.0");
+        } catch (UnsatisfiedLinkError outerE) {
             String msg = "Could not get a handle on lib.";
             LOG.debug(msg, outerE);
             try {
-                libCandidate = LibraryLookup.ofLibrary("libpcsclite.so");
-            } catch (IllegalArgumentException innerE) {
+                System.loadLibrary("libassuan.so");
+            } catch (UnsatisfiedLinkError innerE) {
                 LOG.error(msg + " Giving up.", innerE);
                 throw innerE;
             }
         }
 
-        return libCandidate;
+        return SymbolLookup.loaderLookup();
     }
 }
 

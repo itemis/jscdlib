@@ -1,29 +1,38 @@
 package com.itemis.jscdlib.internal.memory;
 
+import static com.itemis.jscdlib.internal.memory.LongSegment.DEFAULT_VALUE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
 public class PointerSegmentTest {
 
-    private PointerSegment<Object> underTest;
+    private ResourceScope myScope;
+
+    @BeforeEach
+    public void setUp() {
+        myScope = ResourceScope.newConfinedScope();
+    }
 
     @AfterEach
     public void tearDown() {
-        if (underTest != null && underTest.isAlive()) {
-            underTest.close();
+        if (myScope.isAlive()) {
+            myScope.close();
         }
     }
 
     @Test
-    public void pointTo_addr_changes_contents() {
+    public void pointTo_addr_changes_contained_address() {
         var expectedAddr = MemoryAddress.ofLong(123L);
-        underTest = constructSeg();
+        var underTest = constructSeg();
         underTest.pointTo(expectedAddr);
 
         assertThat(underTest.getContainedAddress()).isEqualTo(expectedAddr);
@@ -31,38 +40,35 @@ public class PointerSegmentTest {
     }
 
     @Test
-    public void pointTo_seg_changes_contents() {
-        try (var testSeg = MemorySegment.allocateNative(3)) {
-            var expectedAddr = testSeg.address();
-            underTest = constructSeg();
-            underTest.pointTo(testSeg);
+    public void pointTo_seg_changes_contained_address_to_address_of_seg() {
+        var testSeg = MemorySegment.allocateNative(MemoryLayouts.JAVA_LONG, myScope);
+        var expectedAddr = testSeg.address();
+        var underTest = constructSeg();
+        underTest.pointTo(testSeg);
 
-            assertThat(underTest.getContainedAddress()).isEqualTo(expectedAddr);
-            assertThat(underTest.getValue()).isEqualTo(expectedAddr.toRawLongValue());
-        }
+        assertThat(underTest.getContainedAddress()).isEqualTo(expectedAddr);
+        assertThat(underTest.getValue()).isEqualTo(expectedAddr.toRawLongValue());
     }
 
     @Test
-    public void no_arg_constructor_creates_new_seg_containing_zero() {
-        underTest = constructSeg();
-        assertThat(underTest.getValue()).isEqualTo(-1L);
+    public void no_arg_constructor_creates_new_seg_with_default_value() {
+        var underTest = constructSeg();
+        assertThat(underTest.getValue()).isEqualTo(DEFAULT_VALUE);
     }
 
     @Test
-    public void getContainedAddress_returns_address() {
+    public void getContainedAddress_returns_contained_address() {
         var expectedValue = 123L;
-        try (var seg = new LongSegment()) {
-            underTest = constructSeg(seg.address());
-            underTest.setValue(expectedValue);
-            assertThat(underTest.getContainedAddress().toRawLongValue()).isEqualTo(expectedValue);
-        }
+        var underTest = constructSeg();
+        underTest.setValue(expectedValue);
+        assertThat(underTest.getContainedAddress().toRawLongValue()).isEqualTo(expectedValue);
     }
 
     @Test
     public void constructor_with_addr_sets_addr_correctly() {
         long addr = 123L;
         MemoryAddress expectedAddr = MemoryAddress.ofLong(addr);
-        underTest = constructSeg(expectedAddr);
+        var underTest = constructSeg(expectedAddr);
         assertThat(underTest.address()).isEqualTo(expectedAddr);
     }
 
@@ -72,7 +78,7 @@ public class PointerSegmentTest {
     }
 
     private PointerSegment<Object> constructSeg() {
-        return new PointerSegment<Object>() {
+        return new PointerSegment<Object>(myScope) {
             @Override
             public Object dereference() {
                 return null;
@@ -81,7 +87,7 @@ public class PointerSegmentTest {
     }
 
     private PointerSegment<Object> constructSeg(MemoryAddress addr) {
-        return new PointerSegment<>(addr) {
+        return new PointerSegment<>(addr, myScope) {
             @Override
             public Object dereference() {
                 return null;
