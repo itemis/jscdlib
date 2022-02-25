@@ -2,19 +2,28 @@
 A library that may be used to work with [scdaemon](https://www.gnupg.org/documentation/manuals/gnupg/Invoking-SCDAEMON.html#Invoking-SCDAEMON) and [SmartCards](https://en.wikipedia.org/wiki/Smart_card). This may be useful for client software that deals with security keys based on OpenPGP Smart Card standards.
 
 # Build
-mvn clean install
+Building with Maven >= 3.8.4 is recommended. Java 17 is required in order for the build to finish successful.   
+  
+`mvn clean install`
 
 # Run
-This library requires Java 16
+This library requires Java 17.
 
 # Demo
 See `demo/README.md`
 
 # IDE Setup
-Due to the usage of Java16 incubator code, the following special setup is required:  
-* Add `--add-modules=jdk.incubator.foreign` to the startup JVM options of your IDE (e. g. eclipse.ini).
-* Add the following to JVM options of tests in order to be able to run them from within the IDE:
-```-Dforeign.restricted=permit --add-modules=jdk.incubator.foreign```
+Due to the usage of Java 17 incubator code, the following special setup is required:  
+* Add the following to the startup JVM options of your IDE (e. g. eclipse.ini):
+
+```
+--add-modules=ALL-SYSTEM,jdk.incubator.foreign
+--enable-native-access=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens java.base/java.lang=ALL-UNNAMED
+```
+* Add the following to JVM options to launch configurations in order to be able to run from within the IDE:
+```--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED```
 
 # Usage
 ## List available SmartCard readers
