@@ -17,7 +17,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.nio.file.Paths;
+import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
+import com.itemis.jscdlib.internal.memory.LongPointerSegment;
+import com.itemis.jscdlib.internal.memory.StringPointerSegment;
+import com.itemis.jscdlib.internal.memory.StringSegment;
+import com.itemis.jscdlib.problem.JScdException;
+import com.itemis.jscdlib.problem.JScdProblems;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -26,14 +31,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.stubbing.Answer;
 
-import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
-import com.itemis.jscdlib.internal.memory.LongPointerSegment;
-import com.itemis.jscdlib.internal.memory.LongSegment;
-import com.itemis.jscdlib.internal.memory.StringPointerSegment;
-import com.itemis.jscdlib.problem.JScdException;
-import com.itemis.jscdlib.problem.JScdProblems;
+import java.nio.file.Paths;
 
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
 
 public class AssuanLibHandleTest {
 
@@ -44,8 +45,8 @@ public class AssuanLibHandleTest {
 
     private AssuanLibNative nativeMock;
     private JScdEnvSocketDiscovery socketDiscoveryMock;
-
     private AssuanMethodInvocations invocations;
+    private ResourceScope testMemoryScope;
 
     private AssuanLibHandle underTest;
 
@@ -54,6 +55,7 @@ public class AssuanLibHandleTest {
         nativeMock = mock(AssuanLibNative.class);
         socketDiscoveryMock = mock(JScdEnvSocketDiscovery.class);
         invocations = new AssuanMethodInvocations();
+        testMemoryScope = ResourceScope.newConfinedScope();
 
         when(socketDiscoveryMock.discover()).thenReturn(Paths.get("scdaemon.socket.file"));
 
@@ -86,7 +88,7 @@ public class AssuanLibHandleTest {
     }
 
     @Test
-    public void close_closes_ctx_and_segment() {
+    public void close_calls_release_correctly() {
         try (var l = constructUnderTest()) {
 
         } finally {
@@ -176,8 +178,8 @@ public class AssuanLibHandleTest {
 
     private void assuanNewReturns(Answer<Long> answer) {
         when(nativeMock.assuanNew(any(MemoryAddress.class))).thenAnswer(invocation -> {
-            var ctxPtrSegPtr = new LongPointerSegment(invocation.getArgument(0, MemoryAddress.class));
-            var ctxSeg = new LongSegment();
+            var ctxPtrSegPtr = new LongPointerSegment(invocation.getArgument(0, MemoryAddress.class), testMemoryScope);
+            var ctxSeg = new StringSegment("Assuan ctx lives here", testMemoryScope);
             ctxPtrSegPtr.pointTo(ctxSeg);
             invocations.ctx = ctxSeg.address();
             return answer.answer(invocation);
@@ -192,10 +194,9 @@ public class AssuanLibHandleTest {
     private void assuanTransactReturns(Answer<Long> answer) {
         when(nativeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class))).thenAnswer(invocation -> {
-                try (var commandStrPtr = new StringPointerSegment()) {
-                    commandStrPtr.pointTo(invocation.getArgument(1, MemoryAddress.class));
-                    invocations.command = commandStrPtr.dereference();
-                }
+                var commandStrPtr = new StringPointerSegment(testMemoryScope);
+                commandStrPtr.pointTo(invocation.getArgument(1, MemoryAddress.class));
+                invocations.command = commandStrPtr.dereference();
                 return answer.answer(invocation);
             });
     }

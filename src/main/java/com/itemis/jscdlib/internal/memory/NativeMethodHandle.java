@@ -3,18 +3,17 @@ package com.itemis.jscdlib.internal.memory;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableMap;
-
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.FunctionDescriptor;
-import jdk.incubator.foreign.LibraryLookup;
-import jdk.incubator.foreign.LibraryLookup.Symbol;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemoryLayout;
+import jdk.incubator.foreign.SymbolLookup;
 
 public final class NativeMethodHandle<T> {
 
@@ -36,7 +35,7 @@ public final class NativeMethodHandle<T> {
         }
     }
 
-    public static ReturnTypeStage ofLib(LibraryLookup lib) {
+    public static ReturnTypeStage ofLib(SymbolLookup lib) {
         return new NativeMethodHandleBuilder<>(lib);
     }
 
@@ -94,14 +93,14 @@ public final class NativeMethodHandle<T> {
                 .build();
         }
 
-        private LibraryLookup lib;
-        private Symbol func;
+        private SymbolLookup lib;
+        private MemoryAddress func;
         private Class<?> javaReturnType;
         private MemoryLayout cReturnType;
         private FunctionDescriptor funcDescr;
         private MethodType methodType;
 
-        NativeMethodHandleBuilder(LibraryLookup lib) {
+        NativeMethodHandleBuilder(SymbolLookup lib) {
             this.lib = requireNonNull(lib, "lib");
         }
 
@@ -135,9 +134,9 @@ public final class NativeMethodHandle<T> {
             return new NativeMethodHandle<>(method);
         }
 
-        private static Symbol loadSymbol(LibraryLookup lib, String symbolName) {
-            return lib.lookup(symbolName)
-                .orElseThrow(() -> new RuntimeException("Could not find symbol '" + symbolName + "' in library '" + lib.toString() + "'."));
+        private static MemoryAddress loadSymbol(SymbolLookup lookup, String symbolName) {
+            return lookup.lookup(symbolName)
+                .orElseThrow(() -> new RuntimeException("Could not find symbol '" + symbolName + "' in library '" + lookup.toString() + "'."));
         }
 
         private final MemoryLayout safeGetCType(Class<?> javaType) {

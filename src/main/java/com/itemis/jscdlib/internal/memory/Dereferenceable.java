@@ -1,6 +1,6 @@
 package com.itemis.jscdlib.internal.memory;
 
-public interface Dereferenceable<T> extends AutoCloseable {
+public interface Dereferenceable<T> {
 
     T dereference();
 }

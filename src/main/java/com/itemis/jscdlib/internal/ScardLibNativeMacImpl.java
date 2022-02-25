@@ -7,8 +7,8 @@ import com.itemis.jscdlib.ScardLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class ScardLibNativeMacImpl extends NativeBase implements ScardLibNative {
 
@@ -19,9 +19,9 @@ public class ScardLibNativeMacImpl extends NativeBase implements ScardLibNative 
 
     public ScardLibNativeMacImpl() {
         // See
-        // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
-        var lib = LibraryLookup.ofLibrary("/System/Library/Frameworks/PCSC.framework/PCSC");
-
+        // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L208
+        System.loadLibrary("/System/Library/Frameworks/PCSC.framework/PCSC");
+        var lib = SymbolLookup.loaderLookup();
         establishCtx = NativeMethodHandle
             .ofLib(lib)
             .returnType(long.class)

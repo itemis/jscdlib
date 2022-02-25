@@ -3,15 +3,15 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_LONG;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.itemis.jscdlib.ScardLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class ScardLibNativeLinuxImpl extends NativeBase implements ScardLibNative {
 
@@ -73,24 +73,22 @@ public class ScardLibNativeLinuxImpl extends NativeBase implements ScardLibNativ
         return callNativeFunction(() -> releaseCtx.call(hContext));
     }
 
-    private final LibraryLookup loadLib() {
-        LibraryLookup libCandidate = null;
-
+    private final SymbolLookup loadLib() {
         // See
         // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
         try {
-            libCandidate = LibraryLookup.ofLibrary("libpcsclite.so.1");
-        } catch (IllegalArgumentException outerE) {
+            System.loadLibrary("libpcsclite.so.1");
+        } catch (UnsatisfiedLinkError outerE) {
             String msg = "Could not get a handle on lib.";
             LOG.debug(msg, outerE);
             try {
-                libCandidate = LibraryLookup.ofLibrary("libpcsclite.so");
-            } catch (IllegalArgumentException innerE) {
+                System.loadLibrary("libpcsclite.so");
+            } catch (UnsatisfiedLinkError innerE) {
                 LOG.error(msg + " Giving up.", innerE);
                 throw innerE;
             }
         }
 
-        return libCandidate;
+        return SymbolLookup.loaderLookup();
     }
 }

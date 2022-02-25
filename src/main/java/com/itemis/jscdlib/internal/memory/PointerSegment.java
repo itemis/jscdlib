@@ -2,17 +2,18 @@ package com.itemis.jscdlib.internal.memory;
 
 import static java.util.Objects.requireNonNull;
 
+import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
 public abstract class PointerSegment<T> extends LongSegment implements Dereferenceable<T> {
 
-    public PointerSegment() {
-        super(new LongSegment());
+    public PointerSegment(ResourceScope scope) {
+        super(scope);
     }
 
-    public PointerSegment(MemoryAddress addr) {
-        super(requireNonNull(addr, "addr"));
+    public PointerSegment(MemoryAddress addr, ResourceScope scope) {
+        super(addr, scope);
     }
 
     public final MemoryAddress getContainedAddress() {
@@ -24,7 +25,7 @@ public abstract class PointerSegment<T> extends LongSegment implements Dereferen
         setValue(addr.toRawLongValue());
     }
 
-    public void pointTo(MemorySegment seg) {
+    public void pointTo(Addressable seg) {
         requireNonNull(seg, "seg");
         setValue(seg.address().toRawLongValue());
     }

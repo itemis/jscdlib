@@ -3,21 +3,11 @@ package com.itemis.jscdlib;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static jdk.incubator.foreign.CLinker.C_INT;
 import static jdk.incubator.foreign.CLinker.C_LONG_LONG;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 import static jdk.incubator.foreign.MemoryAddress.NULL;
-
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.itemis.jscdlib.internal.memory.LongPointerSegment;
@@ -25,9 +15,19 @@ import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.Set;
+import java.util.function.Consumer;
+
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
 
 /**
  * Provides convenient Java versions of libassuan based functionality.
@@ -46,8 +46,7 @@ public final class AssuanLibHandle implements AutoCloseable {
     private final LongPointerSegment ctxPtr;
     private final MemoryAddress ctxAddr;
     private final AssuanLibNative nativeBridge;
-
-    private volatile boolean isClosed = false;
+    private final ResourceScope myScope;
 
     /**
      * Create a new instance and initialize resources. Be aware that after construction, this object
@@ -64,12 +63,13 @@ public final class AssuanLibHandle implements AutoCloseable {
         requireNonNull(socketDiscovery, "socketDiscovery");
 
         try {
-            ctxPtr = new LongPointerSegment();
+            myScope = ResourceScope.newConfinedScope();
+            ctxPtr = new LongPointerSegment(myScope);
             throwIfNoSuccess(nativeBridge.assuanNew(ctxPtr.address()));
             ctxAddr = ctxPtr.getContainedAddress();
 
-            var name = CLinker.toCString(socketDiscovery.discover().toString(), UTF_8).address();
-            throwIfNoSuccess(nativeBridge.assuanSocketConnect(ctxAddr, name, ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
+            var socketName = CLinker.toCString(socketDiscovery.discover().toString(), myScope).address();
+            throwIfNoSuccess(nativeBridge.assuanSocketConnect(ctxAddr, socketName, ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
         } catch (Throwable t) {
             close();
             throw t;
@@ -107,13 +107,14 @@ public final class AssuanLibHandle implements AutoCloseable {
             status_cbJava = MethodHandles.lookup().bind(callback, "status_cb",
                 MethodType.methodType(int.class, MemoryAddress.class, MemoryAddress.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new RuntimeException("Implementation problem: Could not find callback method: ");
+            throw new RuntimeException("Implementation problem: Could not find callback method: ", e);
         }
 
-        try (var data_cbC = LINKER.upcallStub(data_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER, C_LONG_LONG));
-                var inquire_cbC = LINKER.upcallStub(inquire_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER));
-                var status_cbC = LINKER.upcallStub(status_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER))) {
-            var cmdAddr = CLinker.toCString(command, UTF_8).address();
+        try (var transactScope = ResourceScope.newConfinedScope()) {
+            var data_cbC = LINKER.upcallStub(data_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER, C_LONG_LONG), transactScope);
+            var inquire_cbC = LINKER.upcallStub(inquire_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER), transactScope);
+            var status_cbC = LINKER.upcallStub(status_cbJava, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER), transactScope);
+            var cmdAddr = CLinker.toCString(command, transactScope).address();
             throwIfNoSuccess(nativeBridge.assuanTransact(ctxAddr, cmdAddr, data_cbC.address(), NULL, inquire_cbC.address(), NULL, status_cbC.address(), NULL));
         }
     }
@@ -125,17 +126,16 @@ public final class AssuanLibHandle implements AutoCloseable {
     @Override
     public final void close() {
         if (ctxAddr != null) {
-            if (!isClosed) {
+            if (myScope.isAlive()) {
                 synchronized (this) {
-                    if (!isClosed) {
-                        isClosed = true;
+                    if (myScope.isAlive()) {
                         try {
                             nativeBridge.assuanRelease(ctxAddr);
                         } catch (Throwable t) {
                             LOG.warn(
                                 "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: " + pretty(t));
                         } finally {
-                            safeClose(ctxPtr);
+                            myScope.close();
                         }
                     }
                 }
@@ -152,15 +152,6 @@ public final class AssuanLibHandle implements AutoCloseable {
         return problem;
     }
 
-    private void safeClose(AutoCloseable closeable) {
-        try {
-            closeable.close();
-        } catch (Exception e) {
-            var msg = e.getMessage() == null ? "No further information." : e.getMessage();
-            LOG.warn("Possible ressource leak: Closing a ressource encountered a problem: " + e.getClass().getSimpleName() + ": " + msg);
-        }
-    }
-
     private static final class TransactCallback {
         private final int SUCCESS = (int) JScdProblems.SCARD_S_SUCCESS.errorCode();
 
@@ -175,7 +166,7 @@ public final class AssuanLibHandle implements AutoCloseable {
         // False positive. Used as a function pointer callback by C-code.
         @SuppressWarnings("unused")
         public int data_cb(MemoryAddress allLines, MemoryAddress currentLine, long lineLength) {
-            responseConsumer.accept(CLinker.toJavaStringRestricted(currentLine, UTF_8));
+            responseConsumer.accept(CLinker.toJavaString(currentLine));
             return SUCCESS;
         }
 
@@ -188,7 +179,7 @@ public final class AssuanLibHandle implements AutoCloseable {
         // False positive. Used as a function pointer callback by C-code.
         @SuppressWarnings("unused")
         public int status_cb(MemoryAddress allLines, MemoryAddress currentLine) {
-            statusConsumer.accept(CLinker.toJavaStringRestricted(currentLine, UTF_8));
+            statusConsumer.accept(CLinker.toJavaString(currentLine));
             return SUCCESS;
         }
     }

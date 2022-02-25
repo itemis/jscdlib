@@ -7,8 +7,8 @@ import com.itemis.jscdlib.AssuanLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class AssuanLibNativeMacImpl extends NativeBase implements AssuanLibNative {
 
@@ -18,9 +18,8 @@ public class AssuanLibNativeMacImpl extends NativeBase implements AssuanLibNativ
     private final NativeMethodHandle<Long> assuanTransact;
 
     public AssuanLibNativeMacImpl() {
-        // See
-        // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
-        var lib = LibraryLookup.ofLibrary("/System/Library/Frameworks/PCSC.framework/PCSC");
+        System.loadLibrary("libassuan");
+        var lib = SymbolLookup.loaderLookup();
         assuanNew = NativeMethodHandle
             .ofLib(lib)
             .returnType(long.class)

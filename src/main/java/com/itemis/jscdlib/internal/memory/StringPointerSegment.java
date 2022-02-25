@@ -1,22 +1,21 @@
 package com.itemis.jscdlib.internal.memory;
 
-import java.nio.charset.StandardCharsets;
-
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
 
 public class StringPointerSegment extends PointerSegment<String> {
 
-    public StringPointerSegment() {
-        super();
+    public StringPointerSegment(ResourceScope scope) {
+        super(scope);
     }
 
-    public StringPointerSegment(MemoryAddress addr) {
-        super(addr);
+    public StringPointerSegment(MemoryAddress addr, ResourceScope scope) {
+        super(addr, scope);
     }
 
     @Override
     public String dereference() {
-        return CLinker.toJavaStringRestricted(getContainedAddress(), StandardCharsets.UTF_8);
+        return CLinker.toJavaString(getContainedAddress());
     }
 }

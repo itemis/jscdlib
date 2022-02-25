@@ -7,8 +7,8 @@ import com.itemis.jscdlib.AssuanLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class AssuanLibNativeWinImpl extends NativeBase implements AssuanLibNative {
 
@@ -18,7 +18,8 @@ public class AssuanLibNativeWinImpl extends NativeBase implements AssuanLibNativ
     private final NativeMethodHandle<Long> assuanTransact;
 
     public AssuanLibNativeWinImpl() {
-        var lib = LibraryLookup.ofLibrary("libassuan6-0");
+        System.loadLibrary("libassuan6-0");
+        var lib = SymbolLookup.loaderLookup();
         assuanNew = NativeMethodHandle
             .ofLib(lib)
             .returnType(long.class)

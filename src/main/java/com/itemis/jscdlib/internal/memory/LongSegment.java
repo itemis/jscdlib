@@ -5,39 +5,43 @@ import static java.util.Objects.requireNonNull;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
 
-public class LongSegment extends MemorySegmentDelegate implements ValueSegment<Long> {
+public class LongSegment extends TypedMutableMemorySegment<Long> {
 
-    private static final long DEFAULT_VALUE = -1L;
+    /**
+     * When creating a {@link LongSegment}, its value will be set to this.
+     */
+    public static final long DEFAULT_VALUE = -1L;
 
-    public LongSegment() {
-        super(MemorySegment.allocateNative(MemoryLayouts.JAVA_LONG));
+    public LongSegment(ResourceScope scope) {
+        super(MemoryLayouts.JAVA_LONG, scope);
         setValue(DEFAULT_VALUE);
     }
 
-    public LongSegment(MemoryAddress addrOfInitialValueSeg) {
-        super(addrOfInitialValueSeg, MemoryLayouts.JAVA_LONG.byteSize());
+    public LongSegment(MemoryAddress addr, ResourceScope scope) {
+        super(addr, MemoryLayouts.JAVA_LONG.byteSize(), scope);
     }
 
-    public LongSegment(MemorySegment initialValueSeg) {
-        super(initialValueSeg);
+    public LongSegment(MemorySegment seg) {
+        super(seg);
     }
 
-    public LongSegment(long initialValue) {
-        this();
+    public LongSegment(long initialValue, ResourceScope scope) {
+        this(scope);
         setValue(initialValue);
     }
 
     @Override
-    public final Long getValue() {
-        return getBuf().getLong();
+    public Long getValue() {
+        return getReadOnlyBuf().getLong();
     }
 
     @Override
-    public final Long setValue(Long newValue) {
+    public Long setValue(Long newValue) {
         requireNonNull(newValue, "newValue");
-        var oldVal = getBuf().getLong();
-        getBuf().putLong(newValue);
+        var oldVal = getValue();
+        getWriteableBuf().putLong(newValue);
         return oldVal;
     }
 }

@@ -7,8 +7,8 @@ import com.itemis.jscdlib.ScardLibNative;
 import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.LibraryLookup;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.SymbolLookup;
 
 public class ScardLibNativeWinImpl extends NativeBase implements ScardLibNative {
 
@@ -18,7 +18,8 @@ public class ScardLibNativeWinImpl extends NativeBase implements ScardLibNative 
     private final NativeMethodHandle<Long> releaseCtx;
 
     public ScardLibNativeWinImpl() {
-        var lib = LibraryLookup.ofLibrary("winscard");
+        System.loadLibrary("winscard");
+        var lib = SymbolLookup.loaderLookup();
         establishCtx = NativeMethodHandle
             .ofLib(lib)
             .returnType(long.class)

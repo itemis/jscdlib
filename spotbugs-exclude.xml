@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
-    <!-- <Match>
-        <Class name="some.class" />
-        <Method name="someMethod" />
-        <Bug pattern="SOME_BUG" />
-    </Match> -->
+    <!-- False positive -->
+    <Match>
+        <Class name="com.itemis.jscdlib.SCardLibHandle" />
+        <Method name="listReaders" />
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+    </Match>
+    <!-- False positive -->
+    <Match>
+        <Class name="com.itemis.jscdlib.internal.memory.IntPointerSegment" />
+        <Method name="dereference" />
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+    </Match>
+    <!-- False positive -->
+    <Match>
+        <Class name="com.itemis.jscdlib.internal.memory.LongPointerSegment" />
+        <Method name="dereference" />
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+    </Match>
 </FindBugsFilter>

@@ -23,17 +23,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.itemis.fluffyj.tests.FluffyTestHelper;
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
 import com.itemis.jscdlib.internal.memory.IntSegment;
@@ -45,7 +34,19 @@ import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
 
 public class ScardLibHandleTest {
 
@@ -59,12 +60,16 @@ public class ScardLibHandleTest {
 
     private SCardMethodInvocations invocations;
     private ScardLibNative nativeMock;
+    private ResourceScope myScope;
+
     private SCardLibHandle underTest;
 
     @BeforeEach
     public void setUp() {
         nativeMock = mock(ScardLibNative.class);
         invocations = new SCardMethodInvocations();
+        myScope = ResourceScope.newConfinedScope();
+
         setupAllMethodsSuccess();
 
         underTest = new SCardLibHandle(nativeMock);
@@ -77,6 +82,14 @@ public class ScardLibHandleTest {
                 underTest.close();
             } catch (Exception e) {
                 LOG.warn("Possible ressource leak. Could not close JScd test handle.", e);
+            }
+        }
+
+        if (myScope != null && myScope.isAlive()) {
+            try {
+                myScope.close();
+            } catch (Exception e) {
+                LOG.warn("Possible ressource leak. Could not close test memory scope.", e);
             }
         }
     }
@@ -247,12 +260,11 @@ public class ScardLibHandleTest {
     private void setupAllMethodsSuccess() {
         when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
             .thenAnswer(invocation -> {
-                try (var ctxPtr = new LongPointerSegment(invocation.getArgument(3, MemoryAddress.class));
-                        var ctx = new LongSegment()) {
-                    ctxPtr.pointTo(ctx);
-                    invocations.hContext = ctxPtr.getContainedAddress();
-                    return SCARD_S_SUCCESS.errorCode();
-                }
+                var ctxPtr = new LongPointerSegment(invocation.getArgument(3, MemoryAddress.class), myScope);
+                var ctx = new LongSegment(myScope);
+                ctxPtr.pointTo(ctx);
+                invocations.hContext = ctxPtr.getContainedAddress();
+                return SCARD_S_SUCCESS.errorCode();
             });
 
         setupAvailableReaders(SCARD_S_SUCCESS);
@@ -266,23 +278,24 @@ public class ScardLibHandleTest {
                 var addrOfReaderListPtr = invocation.getArgument(2, MemoryAddress.class);
                 var addrOfReaderListLength = invocation.getArgument(3, MemoryAddress.class);
 
-                try (var readerList = new StringSegment();
-                        var ptrToReaderList = new StringPointerSegment(addrOfReaderListPtr);
-                        var readerListLength = new IntSegment(addrOfReaderListLength)) {
-                    assertThat(readerListLength.getValue()).as("Provided reader list length must be unset.").isEqualTo(SCARD_AUTOALLOCATE);
-                    var readerListMultiStringBuilder = new StringBuilder("");
-                    Arrays.stream(readerNames).forEach(reader -> {
-                        readerListMultiStringBuilder.append(reader);
-                        readerListMultiStringBuilder.append('\0');
-                    });
+                var readerListMultiStringBuilder = new StringBuilder("");
+                Arrays.stream(readerNames).forEach(reader -> {
+                    readerListMultiStringBuilder.append(reader);
                     readerListMultiStringBuilder.append('\0');
-                    String readerListMultiString = readerListMultiStringBuilder.toString();
-                    readerList.setValue(readerListMultiString);
-                    readerListLength.setValue(readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
-                    ptrToReaderList.pointTo(readerList);
-                    invocations.readerListPtr = ptrToReaderList.getContainedAddress();
-                    return expectedProblem.errorCode();
-                }
+                });
+                readerListMultiStringBuilder.append('\0');
+                String readerListMultiString = readerListMultiStringBuilder.toString();
+                var readerList = new StringSegment(readerListMultiString, myScope);
+
+                var ptrToReaderList = new StringPointerSegment(addrOfReaderListPtr, myScope);
+                ptrToReaderList.pointTo(readerList.address());
+
+                var readerListLength = new IntSegment(addrOfReaderListLength, myScope);
+                assertThat(readerListLength.getValue()).as("Provided reader list length must be unset.").isEqualTo(SCARD_AUTOALLOCATE);
+                readerListLength.setValue(readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
+
+                invocations.readerListPtr = ptrToReaderList.getContainedAddress();
+                return expectedProblem.errorCode();
             });
     }
 
