@@ -343,7 +343,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- For the next to lines see: https://issues.apache.org/jira/browse/SUREFIRE-1919 -->
+                    <!-- For the next two lines see: https://issues.apache.org/jira/browse/SUREFIRE-1919 -->
                     <reuseForks>true</reuseForks>
                     <forkCount>1</forkCount>
                     <!-- $argLine is 'injected' by JaCoCo and contains instructions 
