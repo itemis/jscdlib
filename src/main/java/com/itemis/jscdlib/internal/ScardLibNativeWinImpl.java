@@ -3,10 +3,9 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_LONG_LONG;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
+import com.itemis.fluffyj.memory.NativeMethodHandle;
 import com.itemis.jscdlib.ScardLibNative;
-import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
-import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.SymbolLookup;
 
@@ -21,32 +20,28 @@ public class ScardLibNativeWinImpl extends NativeBase implements ScardLibNative 
         System.loadLibrary("winscard");
         var lib = SymbolLookup.loaderLookup();
         establishCtx = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardEstablishContext")
-            .args(C_LONG_LONG, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_LONG_LONG, C_POINTER, C_POINTER, C_POINTER);
 
         listReaders = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardListReadersA")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER);
 
         freeMem = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardFreeMemory")
-            .args(C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER);
 
         releaseCtx = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardReleaseContext")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
     }
 
     @Override

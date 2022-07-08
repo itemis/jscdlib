@@ -3,10 +3,9 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_INT;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
+import com.itemis.fluffyj.memory.NativeMethodHandle;
 import com.itemis.jscdlib.AssuanLibNative;
-import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
-import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.SymbolLookup;
 
@@ -20,33 +19,30 @@ public class AssuanLibNativeWinImpl extends NativeBase implements AssuanLibNativ
     public AssuanLibNativeWinImpl() {
         System.loadLibrary("libassuan6-0");
         var lib = SymbolLookup.loaderLookup();
+
         assuanNew = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_new")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
 
         assuanRelease = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_release")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
 
         assuanSocketConnect = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_socket_connect")
-            .args(C_POINTER, C_POINTER, C_INT, C_INT)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_INT, C_INT);
 
         assuanTransact = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_transact")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER);
     }
 
     @Override

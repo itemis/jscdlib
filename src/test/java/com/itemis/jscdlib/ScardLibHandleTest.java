@@ -1,6 +1,9 @@
 package com.itemis.jscdlib;
 
 import static ch.qos.logback.classic.Level.WARN;
+import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
+import static com.itemis.fluffyj.memory.FluffyMemory.segment;
+import static com.itemis.fluffyj.memory.api.FluffyPointer.FLUFFY_POINTER_BYTE_ORDER;
 import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
@@ -8,6 +11,7 @@ import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_MEMORY;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_S_SUCCESS;
 import static jdk.incubator.foreign.MemoryAddress.NULL;
+import static jdk.incubator.foreign.MemoryLayouts.ADDRESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,13 +27,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.itemis.fluffyj.memory.internal.StringSegment;
 import com.itemis.fluffyj.tests.FluffyTestHelper;
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
-import com.itemis.jscdlib.internal.memory.IntSegment;
-import com.itemis.jscdlib.internal.memory.LongPointerSegment;
-import com.itemis.jscdlib.internal.memory.LongSegment;
-import com.itemis.jscdlib.internal.memory.StringPointerSegment;
-import com.itemis.jscdlib.internal.memory.StringSegment;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
@@ -180,7 +180,7 @@ public class ScardLibHandleTest {
 
     @Test
     public void list_readers_throws_jscdException_if_establish_context_fails() {
-        JScdProblems expectedProblem = SCARD_E_NO_MEMORY;
+        var expectedProblem = SCARD_E_NO_MEMORY;
         establishContextReturns(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders()).as("Expected exception in case of an error in smart card native code.")
             .isInstanceOf(JScdException.class)
@@ -189,7 +189,7 @@ public class ScardLibHandleTest {
 
     @Test
     public void list_readers_throws_jscdException_if_scardListReaders_fails() {
-        JScdProblems expectedProblem = SCARD_E_NO_MEMORY;
+        var expectedProblem = SCARD_E_NO_MEMORY;
         setupAvailableReaders(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders()).as("Expected exception in case of an error in smart card native code.")
             .isInstanceOf(JScdException.class)
@@ -223,7 +223,7 @@ public class ScardLibHandleTest {
 
     @Test
     public void errors_during_free_mem_are_logged_no_exception_is_thrown() {
-        JScdProblems expectedProblem = SCARD_E_NO_MEMORY;
+        var expectedProblem = SCARD_E_NO_MEMORY;
         freeMemReturns(expectedProblem);
 
         assertDoesNotThrow(() -> underTest.listReaders());
@@ -234,7 +234,7 @@ public class ScardLibHandleTest {
 
     @Test
     public void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
-        JScdProblems expectedProblem = SCARD_E_NO_MEMORY;
+        var expectedProblem = SCARD_E_NO_MEMORY;
         releaseCtxReturns(expectedProblem);
 
         assertDoesNotThrow(() -> underTest.listReaders());
@@ -260,10 +260,10 @@ public class ScardLibHandleTest {
     private void setupAllMethodsSuccess() {
         when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
             .thenAnswer(invocation -> {
-                var ctxPtr = new LongPointerSegment(invocation.getArgument(3, MemoryAddress.class), myScope);
-                var ctx = new LongSegment(myScope);
-                ctxPtr.pointTo(ctx);
-                invocations.hContext = ctxPtr.getContainedAddress();
+                var ctxPtr = invocation.getArgument(3, MemoryAddress.class).asSegment(ADDRESS.byteSize(), myScope);
+                var ctx = segment().of("sCardCtx lives here").allocate(myScope);
+                ctxPtr.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(ctx.address().toRawLongValue());
+                invocations.hContext = ctx.address();
                 return SCARD_S_SUCCESS.errorCode();
             });
 
@@ -284,17 +284,18 @@ public class ScardLibHandleTest {
                     readerListMultiStringBuilder.append('\0');
                 });
                 readerListMultiStringBuilder.append('\0');
-                String readerListMultiString = readerListMultiStringBuilder.toString();
+                var readerListMultiString = readerListMultiStringBuilder.toString();
                 var readerList = new StringSegment(readerListMultiString, myScope);
 
-                var ptrToReaderList = new StringPointerSegment(addrOfReaderListPtr, myScope);
-                ptrToReaderList.pointTo(readerList.address());
+                var rawPtrToReaderList = addrOfReaderListPtr.asSegment(ADDRESS.byteSize(), myScope);
+                rawPtrToReaderList.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(readerList.address().toRawLongValue());
 
-                var readerListLength = new IntSegment(addrOfReaderListLength, myScope);
-                assertThat(readerListLength.getValue()).as("Provided reader list length must be unset.").isEqualTo(SCARD_AUTOALLOCATE);
-                readerListLength.setValue(readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
+                var readerListLength = addrOfReaderListLength.asSegment(ADDRESS.byteSize(), myScope);
+                var r = pointer().to(addrOfReaderListLength).as(Integer.class).allocate(myScope);
+                assertThat(r.dereference()).as("Provided reader list length must be unset.").isEqualTo(SCARD_AUTOALLOCATE);
+                readerListLength.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putInt(readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
 
-                invocations.readerListPtr = ptrToReaderList.getContainedAddress();
+                invocations.readerListPtr = readerList.address();
                 return expectedProblem.errorCode();
             });
     }

@@ -3,13 +3,12 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_LONG;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
+import com.itemis.fluffyj.memory.NativeMethodHandle;
 import com.itemis.jscdlib.ScardLibNative;
-import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.SymbolLookup;
 
@@ -25,32 +24,28 @@ public class ScardLibNativeLinuxImpl extends NativeBase implements ScardLibNativ
     public ScardLibNativeLinuxImpl() {
         var lib = loadLib();
         establishCtx = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardEstablishContext")
-            .args(C_LONG, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_LONG, C_POINTER, C_POINTER, C_POINTER);
 
         listReaders = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardListReaders")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER);
 
         freeMem = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardFreeMemory")
-            .args(C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER);
 
         releaseCtx = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("SCardReleaseContext")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
     }
 
     @Override
@@ -79,7 +74,7 @@ public class ScardLibNativeLinuxImpl extends NativeBase implements ScardLibNativ
         try {
             System.loadLibrary("libpcsclite.so.1");
         } catch (UnsatisfiedLinkError outerE) {
-            String msg = "Could not get a handle on lib.";
+            var msg = "Could not get a handle on lib.";
             LOG.debug(msg, outerE);
             try {
                 System.loadLibrary("libpcsclite.so");

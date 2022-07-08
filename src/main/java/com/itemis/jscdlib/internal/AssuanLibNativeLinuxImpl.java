@@ -3,13 +3,12 @@ package com.itemis.jscdlib.internal;
 import static jdk.incubator.foreign.CLinker.C_INT;
 import static jdk.incubator.foreign.CLinker.C_POINTER;
 
+import com.itemis.fluffyj.memory.NativeMethodHandle;
 import com.itemis.jscdlib.AssuanLibNative;
-import com.itemis.jscdlib.internal.memory.NativeMethodHandle;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.SymbolLookup;
 
@@ -26,32 +25,28 @@ public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNat
         var lib = loadLib();
 
         assuanNew = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_new")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
 
         assuanRelease = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_release")
-            .args(C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER);
 
         assuanSocketConnect = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_socket_connect")
-            .args(C_POINTER, C_POINTER, C_INT, C_INT)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_INT, C_INT);
 
         assuanTransact = NativeMethodHandle
-            .ofLib(lib)
+            .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_transact")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER)
-            .create(CLinker.getInstance());
+            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER);
     }
 
     @Override
@@ -79,7 +74,7 @@ public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNat
         try {
             System.loadLibrary("libassuan.so.0");
         } catch (UnsatisfiedLinkError outerE) {
-            String msg = "Could not get a handle on lib.";
+            var msg = "Could not get a handle on lib.";
             LOG.debug(msg, outerE);
             try {
                 System.loadLibrary("libassuan.so");

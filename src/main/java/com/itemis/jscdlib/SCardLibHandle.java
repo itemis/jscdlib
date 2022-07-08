@@ -1,16 +1,18 @@
 package com.itemis.jscdlib;
 
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
+import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
+import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static jdk.incubator.foreign.MemoryAddress.NULL;
+import static jdk.incubator.foreign.ResourceScope.newConfinedScope;
 
 import com.google.common.collect.ImmutableSet;
-import com.itemis.jscdlib.internal.memory.IntSegment;
-import com.itemis.jscdlib.internal.memory.LongPointerSegment;
-import com.itemis.jscdlib.internal.memory.StringPointerSegment;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
@@ -18,7 +20,6 @@ import com.itemis.jscdlib.problem.JScdProblems;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,7 +47,7 @@ public final class SCardLibHandle implements AutoCloseable {
     public SCardLibHandle(ScardLibNative nativeBridge) {
         this.nativeBridge = requireNonNull(nativeBridge, "nativeBridge");
 
-        myScope = ResourceScope.newConfinedScope();
+        myScope = newConfinedScope();
     }
 
     /**
@@ -64,42 +65,43 @@ public final class SCardLibHandle implements AutoCloseable {
      */
     public List<String> listReaders() {
         List<String> result = new ArrayList<>();
-        boolean ctxEstablished = false;
-        boolean listReadersReturned = false;
+        var ctxEstablished = false;
+        var listReadersReturned = false;
 
-        try (var listReadersScope = ResourceScope.newConfinedScope()) {
-            LongPointerSegment ctxPtrSeg = new LongPointerSegment(listReadersScope);
-            StringPointerSegment readerListPtrSeg = new StringPointerSegment(listReadersScope);
+        try (var listReadersScope = newConfinedScope()) {
+            var ctxPtrSeg = pointer().allocate(listReadersScope);
+            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersScope);
             MemoryAddress ptrToFirstEntryInReaderList = null;
             try {
-                var readerListLength = new IntSegment(listReadersScope);
-                readerListLength.setValue(SCARD_AUTOALLOCATE);
+                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
 
-                throwIfNoSuccess(nativeBridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, MemoryAddress.NULL, MemoryAddress.NULL, ctxPtrSeg.address()));
+                throwIfNoSuccess(nativeBridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
                 ctxEstablished = true;
 
                 var listReadersProblem = throwIfNoSuccess(
-                    nativeBridge.sCardListReadersA(ctxPtrSeg.getContainedAddress(), SCARD_ALL_READERS, readerListPtrSeg.address(), readerListLength.address()));
+                    nativeBridge.sCardListReadersA(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(), readerListLength.address()));
                 listReadersReturned = true;
-                ptrToFirstEntryInReaderList = readerListPtrSeg.getContainedAddress();
+                ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
                 if (listReadersProblem != SCARD_E_NO_READERS_AVAILABLE) {
-                    final int TRAILING_NULL = 1;
+                    final var TRAILING_NULL = 1;
                     var remainingLength = readerListLength.getValue() - TRAILING_NULL;
+                    var localReaderListPtrSeg = readerListPtrSeg;
                     while (remainingLength > 0) {
-                        String currentReader = readerListPtrSeg.dereference();
+                        var currentReader = localReaderListPtrSeg.dereference();
                         result.add(currentReader);
-                        var nextOffset = currentReader.getBytes(StandardCharsets.UTF_8).length + TRAILING_NULL;
-                        readerListPtrSeg.pointTo(readerListPtrSeg.getContainedAddress().addOffset(nextOffset));
+                        var nextOffset = currentReader.getBytes(UTF_8).length + TRAILING_NULL;
+                        var addressOfNextEntry = readerListPtrSeg.getValue().addOffset(nextOffset);
+                        localReaderListPtrSeg = pointer().to(addressOfNextEntry).as(String.class).allocate(listReadersScope);
                         remainingLength -= nextOffset;
                     }
                 }
             } finally {
                 if (ctxEstablished) {
                     if (listReadersReturned) {
-                        logIfNoSuccess(nativeBridge.sCardFreeMemory(ctxPtrSeg.getContainedAddress(), ptrToFirstEntryInReaderList),
+                        logIfNoSuccess(nativeBridge.sCardFreeMemory(ctxPtrSeg.getValue(), ptrToFirstEntryInReaderList),
                             "Possible ressource leak: Operation listReaders could not free memory.");
                     }
-                    logIfNoSuccess(nativeBridge.sCardReleaseContext(ctxPtrSeg.getContainedAddress()),
+                    logIfNoSuccess(nativeBridge.sCardReleaseContext(ctxPtrSeg.getValue()),
                         "Possible ressource leak: Operation listReaders could not release scard context.");
                 }
             }
