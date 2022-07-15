@@ -22,7 +22,7 @@ Due to the usage of Java 17 incubator code, the following special setup is requi
 --add-opens=java.base/java.util=ALL-UNNAMED
 --add-opens java.base/java.lang=ALL-UNNAMED
 ```
-* Add the following to JVM options to launch configurations in order to be able to run from within the IDE:
+* Add the following JVM options to launch configurations in order to be able to run from within the IDE:
 ```--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED```
 
 # Usage
