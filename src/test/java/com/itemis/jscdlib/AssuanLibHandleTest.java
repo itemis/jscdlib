@@ -2,10 +2,14 @@ package com.itemis.jscdlib;
 
 import static ch.qos.logback.classic.Level.WARN;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
+import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
+import static com.itemis.fluffyj.memory.FluffyMemory.segment;
+import static com.itemis.fluffyj.memory.api.FluffyPointer.FLUFFY_POINTER_BYTE_ORDER;
 import static com.itemis.fluffyj.tests.FluffyTestHelper.assertNullArgNotAccepted;
 import static com.itemis.fluffyj.tests.exceptions.ExpectedExceptions.EXPECTED_CHECKED_EXCEPTION;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
+import static jdk.incubator.foreign.MemoryLayouts.ADDRESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -13,14 +17,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
-import com.itemis.jscdlib.internal.memory.LongPointerSegment;
-import com.itemis.jscdlib.internal.memory.StringPointerSegment;
-import com.itemis.jscdlib.internal.memory.StringSegment;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblems;
 
@@ -65,8 +65,8 @@ public class AssuanLibHandleTest {
 
         underTest = constructUnderTest();
 
-        verify(nativeMock, times(1)).assuanNew(any(MemoryAddress.class));
-        verify(nativeMock, times(1)).assuanSocketConnect(eq(invocations.ctx), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
+        verify(nativeMock).assuanNew(any(MemoryAddress.class));
+        verify(nativeMock).assuanSocketConnect(eq(invocations.ctx), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
             eq(ASSUAN_SOCKET_CONNECT_FDPASSING));
     }
 
@@ -92,7 +92,7 @@ public class AssuanLibHandleTest {
         try (var l = constructUnderTest()) {
 
         } finally {
-            verify(nativeMock, times(1)).assuanRelease(eq(invocations.ctx));
+            verify(nativeMock).assuanRelease(eq(invocations.ctx));
         }
     }
 
@@ -128,11 +128,11 @@ public class AssuanLibHandleTest {
 
     @Test
     public void sendCommand_happyPath() {
-        String expectedCommand = "SERIALNO";
+        var expectedCommand = "SERIALNO";
 
         underTest.sendCommand(expectedCommand, line -> System.out.println(line), line -> System.out.println(line));
 
-        verify(nativeMock, times(1)).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class), eq(MemoryAddress.NULL),
+        verify(nativeMock).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class), eq(MemoryAddress.NULL),
             any(MemoryAddress.class), eq(MemoryAddress.NULL), any(MemoryAddress.class), eq(MemoryAddress.NULL));
         assertThat(invocations.command).as("Unexpected command").isEqualTo(expectedCommand);
     }
@@ -168,7 +168,7 @@ public class AssuanLibHandleTest {
             underTest.close();
         });
 
-        verify(nativeMock, times(1)).assuanRelease(any(MemoryAddress.class));
+        verify(nativeMock).assuanRelease(any(MemoryAddress.class));
     }
 
     private static final class AssuanMethodInvocations {
@@ -178,9 +178,9 @@ public class AssuanLibHandleTest {
 
     private void assuanNewReturns(Answer<Long> answer) {
         when(nativeMock.assuanNew(any(MemoryAddress.class))).thenAnswer(invocation -> {
-            var ctxPtrSegPtr = new LongPointerSegment(invocation.getArgument(0, MemoryAddress.class), testMemoryScope);
-            var ctxSeg = new StringSegment("Assuan ctx lives here", testMemoryScope);
-            ctxPtrSegPtr.pointTo(ctxSeg);
+            var ctxPtrSegPtr = invocation.getArgument(0, MemoryAddress.class).asSegment(ADDRESS.byteSize(), testMemoryScope);
+            var ctxSeg = segment().of("Assuan ctx lives here").allocate(testMemoryScope);
+            ctxPtrSegPtr.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(ctxSeg.address().toRawLongValue());
             invocations.ctx = ctxSeg.address();
             return answer.answer(invocation);
         });
@@ -194,8 +194,7 @@ public class AssuanLibHandleTest {
     private void assuanTransactReturns(Answer<Long> answer) {
         when(nativeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class))).thenAnswer(invocation -> {
-                var commandStrPtr = new StringPointerSegment(testMemoryScope);
-                commandStrPtr.pointTo(invocation.getArgument(1, MemoryAddress.class));
+                var commandStrPtr = pointer().to(invocation.getArgument(1, MemoryAddress.class)).as(String.class).allocate(testMemoryScope);
                 invocations.command = commandStrPtr.dereference();
                 return answer.answer(invocation);
             });
