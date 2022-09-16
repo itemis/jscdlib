@@ -41,7 +41,7 @@ public final class JScdException extends RuntimeException {
     /**
      * Uses {@link #DEFAULT_PROBLEM} and a combination of {@link #DEFAULT_MESSAGE} and
      * {@code cause's} message.
-     * 
+     *
      * @param cause
      */
     public JScdException(Throwable cause) {
@@ -54,7 +54,7 @@ public final class JScdException extends RuntimeException {
 
     /**
      * Construct an exception out of {@code problem} and {@code problem's} message.
-     * 
+     *
      * @param problem
      */
     public JScdException(JScdProblem problem) {
@@ -65,12 +65,12 @@ public final class JScdException extends RuntimeException {
     /**
      * Like {@link #JScdException(JScdProblem)} but appends {@code appendix} to {@code problem's}
      * message.
-     * 
+     *
      * @param problem
      * @param appendix
      */
     public JScdException(JScdProblem problem, String appendix) {
-        super(MESSAGE_FROM_PROBLEM_SUPPLIER.apply(requireNonNull(problem, "problem")) + " - " + appendix);
+        super(MESSAGE_FROM_PROBLEM_SUPPLIER.apply(requireNonNull(problem, "problem")) + appendix);
         this.problem = problem;
     }
 

@@ -22,8 +22,18 @@ Due to the usage of Java 17 incubator code, the following special setup is requi
 --add-opens=java.base/java.util=ALL-UNNAMED
 --add-opens java.base/java.lang=ALL-UNNAMED
 ```
+
+* Add the following JVM options to launch configurations of tests in order to be able to run JUnit tests from within the IDE:
+
+```
+-ea --add-modules=ALL-SYSTEM,jdk.incubator.foreign --enable-native-access=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+```
+  
 * Add the following JVM options to launch configurations in order to be able to run from within the IDE:
-```--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED```
+
+```
+--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED
+```
 
 # Usage
 ## List available SmartCard readers

@@ -62,7 +62,7 @@ public class JScdExceptionTest {
         var underTest = new JScdException(EXPECTED_PROBLEM, expectedAppendix);
 
         assertThat(underTest.getMessage())
-            .isEqualTo(EXPECTED_PROBLEM + ": " + EXPECTED_PROBLEM.description() + " - " + expectedAppendix);
+            .isEqualTo(EXPECTED_PROBLEM + ": " + EXPECTED_PROBLEM.description() + expectedAppendix);
     }
 
     @Test
@@ -82,7 +82,7 @@ public class JScdExceptionTest {
         assertThat(underTest.getMessage()).isEqualTo(SCARD_F_INTERNAL_ERROR + ": " + SCARD_F_INTERNAL_ERROR.description() + " - "
             + EXPECTED_CHECKED_EXCEPTION.getClass().getSimpleName() + ": " + EXPECTED_CHECKED_EXCEPTION.getMessage());
 
-        NullPointerException npe = new NullPointerException();
+        var npe = new NullPointerException();
         underTest = new JScdException(npe);
         assertThat(underTest.getMessage()).isEqualTo(SCARD_F_INTERNAL_ERROR + ": " + SCARD_F_INTERNAL_ERROR.description() + " - "
             + npe.getClass().getSimpleName() + ": No further information");
