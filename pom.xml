@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
-        <version>5.5.0</version>
+        <version>5.6.0</version>
     </parent>
 
     <artifactId>jscdlib</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -54,7 +54,7 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
-        <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
+        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
         <build.timestamp.formatted>${maven.build.timestamp}</build.timestamp.formatted>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm.ssZ</maven.build.timestamp.format>
@@ -63,21 +63,20 @@
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
         <guava.version>31.1-jre</guava.version>
-        <mockito.version>4.6.1</mockito.version>
+        <mockito.version>4.8.0</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <spotbugs.version>4.7.1</spotbugs.version>
-        <spotbugs.plugin.version>4.7.1.0</spotbugs.plugin.version>
-        <junit.version>5.8.2</junit.version>
+        <spotbugs.plugin.version>4.7.2.0</spotbugs.plugin.version>
+        <junit.version>5.9.1</junit.version>
         <jacoco.plugin.version>0.8.8</jacoco.plugin.version>
         <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
         <assertj.version>3.23.1</assertj.version>
-        <logback.version>1.2.11</logback.version>
+        <logback.version>1.4.3</logback.version>
         <equalsverifier.version>3.10</equalsverifier.version>
         <awaitility.version>4.2.0</awaitility.version>
-        <arch.unit.version>0.23.1</arch.unit.version>
-        <fluffyj.version>1.8.1</fluffyj.version>
-        <fluffyj-tests.version>1.3.1</fluffyj-tests.version>
-        <fluffyj-memory.version>1.1.1</fluffyj-memory.version>
+        <arch.unit.version>1.0.0</arch.unit.version>
+        <fluffyj.version>1.10.0</fluffyj.version>
+        <fluffyj-tests.version>1.5.0</fluffyj-tests.version>
+        <fluffyj-memory.version>1.1.4</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <custom.jvm.options>
             --enable-native-access=ALL-UNNAMED

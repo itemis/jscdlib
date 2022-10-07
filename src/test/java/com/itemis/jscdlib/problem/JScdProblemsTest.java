@@ -3,12 +3,12 @@ package com.itemis.jscdlib.problem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class JScdProblemsTest {
 
@@ -34,7 +34,7 @@ public class JScdProblemsTest {
     public void test_error_codes_are_unique() {
         Set<Long> errorCodes = new HashSet<>();
 
-        JScdProblems[] knownProblems = JScdProblems.values();
+        var knownProblems = JScdProblems.values();
         for (JScdProblems problem : knownProblems) {
             errorCodes.add(problem.errorCode());
         }
@@ -53,6 +53,6 @@ public class JScdProblemsTest {
     @ParameterizedTest
     public void test_toString(JScdProblems problem) {
         assertThat(problem.toString()).as("toString: Encountered unexpected result.")
-            .isEqualTo(problem.errorName() + " (0x" + Long.toHexString(problem.errorCode()).toUpperCase() + ")");
+            .isEqualTo(problem.errorName());
     }
 }

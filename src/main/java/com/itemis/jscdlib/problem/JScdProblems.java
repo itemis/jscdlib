@@ -98,7 +98,7 @@ public enum JScdProblems
     private final long errorCode;
     private final String description;
 
-    private JScdProblems(long errorCode, String description) {
+    JScdProblems(long errorCode, String description) {
         this.errorCode = requireNonNull(errorCode);
         this.description = requireNonNull(description);
     }
@@ -120,27 +120,25 @@ public enum JScdProblems
 
     /**
      * Convert an {@code errorCode} into a matching enum value.
-     * 
+     *
      * @param errorCode Code to find a matching enum value to.
      * @return A matching {@link JScdProblem} instance.
      * @throws JScdException if the code is unknown.
      */
     public static JScdProblem fromError(long errorCode) {
-        var problemCandidates = Arrays.stream(JScdProblems.values()).filter(problem -> {
-            return problem.errorCode == errorCode;
-        }).toList();
+        var problemCandidates = Arrays.stream(JScdProblems.values()).filter(problem -> (problem.errorCode == errorCode)).toList();
 
         if (problemCandidates.isEmpty()) {
-            throw new JScdException(UNKNOWN_ERROR_CODE, "0x" + Long.toHexString(errorCode).toUpperCase());
-        } else if (problemCandidates.size() > 1) {
-            throw new JScdException(IMPLEMENTATION_ERROR, "Encountered more than one problem with the same error code.");
-        } else {
-            return problemCandidates.get(0);
+            throw new JScdException(UNKNOWN_ERROR_CODE, ": 0x" + Long.toHexString(errorCode).toUpperCase());
         }
+        if (problemCandidates.size() > 1) {
+            throw new JScdException(IMPLEMENTATION_ERROR, ": Encountered more than one problem with the same error code.");
+        }
+        return problemCandidates.get(0);
     }
 
     @Override
     public String toString() {
-        return this.errorName() + " (0x" + Long.toHexString(errorCode).toUpperCase() + ")";
+        return this.errorName();
     }
 }

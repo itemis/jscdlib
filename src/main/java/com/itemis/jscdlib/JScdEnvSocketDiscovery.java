@@ -2,17 +2,17 @@ package com.itemis.jscdlib;
 
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 
+import com.itemis.jscdlib.problem.JScdException;
+import com.itemis.jscdlib.problem.JScdProblems;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.itemis.jscdlib.problem.JScdException;
-import com.itemis.jscdlib.problem.JScdProblems;
 
 /**
  * <p>
@@ -63,27 +63,25 @@ public final class JScdEnvSocketDiscovery implements JScdSocketDiscovery {
             if (rawResultPath == null) {
                 LOG.error("Neither system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' nor environment variable '" + GNUPGHOME_ENV_KEY
                     + "' are set. Cannot determine scdaemon socket file name.");
-                throw new JScdException(JScdProblems.JSCD_GENERAL_ERROR, "Could not determine scdaemon socket file");
-            } else {
-                LOG.debug("Using value of environment variable '"
-                    + GNUPGHOME_ENV_KEY + "' as dir of scdaemon socket file.");
-                rawResultPath = rawResultPath + File.separator + SOCKET_FILE_NAME;
+                throw new JScdException(JScdProblems.JSCD_GENERAL_ERROR, ": Could not determine scdaemon socket file");
             }
+            LOG.debug("Using value of environment variable '"
+                + GNUPGHOME_ENV_KEY + "' as dir of scdaemon socket file.");
+            rawResultPath = rawResultPath + File.separator + SOCKET_FILE_NAME;
         } else {
             LOG.debug("Found system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' set to '" + rawResultPath + "'.");
         }
 
         try {
             result = Paths.get(rawResultPath);
-            if (Files.isRegularFile(result)) {
-                LOG.debug("Found valid socket file: " + result);
-            } else {
+            if (!Files.isRegularFile(result)) {
                 LOG.error(result + " is not a valid socket file.");
                 throw new FileNotFoundException(result + " is not a valid socket file.");
             }
+            LOG.debug("Found valid socket file: " + result);
         } catch (Exception e) {
             throw new JScdException(JScdProblems.JSCD_GENERAL_ERROR,
-                "Converting value '" + rawResultPath + "' to path caused: " + pretty(e));
+                ": Converting value '" + rawResultPath + "' to path caused: " + pretty(e));
         }
 
         return result;
