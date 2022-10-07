@@ -7,10 +7,9 @@ import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
+import static java.lang.foreign.MemoryAddress.NULL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static jdk.incubator.foreign.MemoryAddress.NULL;
-import static jdk.incubator.foreign.ResourceScope.newConfinedScope;
 
 import com.google.common.collect.ImmutableSet;
 import com.itemis.jscdlib.problem.JScdException;
@@ -20,13 +19,12 @@ import com.itemis.jscdlib.problem.JScdProblems;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.MemorySession;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
 
 /**
  * <p>
@@ -39,15 +37,16 @@ import jdk.incubator.foreign.ResourceScope;
 public final class SCardLibHandle implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SCardLibHandle.class);
-    private static final Set<JScdProblem> NON_FATAL_PROBLEMS = ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
+    private static final Set<JScdProblem> NON_FATAL_PROBLEMS =
+        ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
 
     private final ScardLibNative nativeBridge;
-    private final ResourceScope myScope;
+    private final MemorySession mySession;
 
     public SCardLibHandle(ScardLibNative nativeBridge) {
         this.nativeBridge = requireNonNull(nativeBridge, "nativeBridge");
 
-        myScope = newConfinedScope();
+        mySession = MemorySession.openConfined();
     }
 
     /**
@@ -68,18 +67,20 @@ public final class SCardLibHandle implements AutoCloseable {
         var ctxEstablished = false;
         var listReadersReturned = false;
 
-        try (var listReadersScope = newConfinedScope()) {
-            var ctxPtrSeg = pointer().allocate(listReadersScope);
-            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersScope);
+        try (var listReadersSession = MemorySession.openConfined()) {
+            var ctxPtrSeg = pointer().allocate(listReadersSession);
+            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersSession);
             MemoryAddress ptrToFirstEntryInReaderList = null;
             try {
-                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
+                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersSession);
 
-                throwIfNoSuccess(nativeBridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
+                throwIfNoSuccess(
+                    nativeBridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
                 ctxEstablished = true;
 
                 var listReadersProblem = throwIfNoSuccess(
-                    nativeBridge.sCardListReadersA(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(), readerListLength.address()));
+                    nativeBridge.sCardListReadersA(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(),
+                        readerListLength.address()));
                 listReadersReturned = true;
                 ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
                 if (listReadersProblem != SCARD_E_NO_READERS_AVAILABLE) {
@@ -91,7 +92,8 @@ public final class SCardLibHandle implements AutoCloseable {
                         result.add(currentReader);
                         var nextOffset = currentReader.getBytes(UTF_8).length + TRAILING_NULL;
                         var addressOfNextEntry = readerListPtrSeg.getValue().addOffset(nextOffset);
-                        localReaderListPtrSeg = pointer().to(addressOfNextEntry).as(String.class).allocate(listReadersScope);
+                        localReaderListPtrSeg =
+                            pointer().to(addressOfNextEntry).as(String.class).allocate(listReadersSession);
                         remainingLength -= nextOffset;
                     }
                 }
@@ -126,25 +128,25 @@ public final class SCardLibHandle implements AutoCloseable {
         }
     }
 
-    private void safeClose(ResourceScope scope) {
+    private void safeClose(MemorySession session) {
         try {
-            scope.close();
+            session.close();
         } catch (Throwable t) {
             LOG.warn(
-                "Possible ressource leak: Could not close resource scope. Reason: " + pretty(t));
+                "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
         }
     }
 
     @Override
     public void close() throws Exception {
-        if (!myScope.isAlive()) {
+        if (!mySession.isAlive()) {
             synchronized (this) {
-                if (!myScope.isAlive()) {
+                if (!mySession.isAlive()) {
                     try {
-                        safeClose(myScope);
+                        safeClose(mySession);
                     } catch (Throwable t) {
                         LOG.warn(
-                            "Possible ressource leak: Could not close resource scope. Reason: " + pretty(t));
+                            "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
                     }
                 }
             }

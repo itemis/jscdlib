@@ -2,37 +2,30 @@
 A library that may be used to work with [scdaemon](https://www.gnupg.org/documentation/manuals/gnupg/Invoking-SCDAEMON.html#Invoking-SCDAEMON) and [SmartCards](https://en.wikipedia.org/wiki/Smart_card). This may be useful for client software that deals with security keys based on OpenPGP Smart Card standards.
 
 # Build
-Building with Maven >= 3.8.4 is recommended. Java 17 is required in order for the build to finish successful.   
+Building with Maven >= 3.8.4 is recommended. Java 19 is required in order for the build to finish successful.   
   
 `mvn clean install`
 
 # Run
-This library requires Java 17.
+This library requires Java 19.
 
 # Demo
 See `demo/README.md`
 
-# IDE Setup
-Due to the usage of Java 17 incubator code, the following special setup is required:  
-* Add the following to the startup JVM options of your IDE (e. g. eclipse.ini):
-
-```
---add-modules=ALL-SYSTEM,jdk.incubator.foreign
---enable-native-access=ALL-UNNAMED
---add-opens=java.base/java.util=ALL-UNNAMED
---add-opens java.base/java.lang=ALL-UNNAMED
-```
-
+# Eclipse IDE Setup
+Due to the usage of Java 19 preview code, the following special setup is required:  
+  
 * Add the following JVM options to launch configurations of tests in order to be able to run JUnit tests from within the IDE:
 
 ```
--ea --add-modules=ALL-SYSTEM,jdk.incubator.foreign --enable-native-access=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+-ea --enable-preview --enable-native-access=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens java.base/java.lang=ALL-UNNAMED
 ```
   
-* Add the following JVM options to launch configurations in order to be able to run from within the IDE:
+* Add the following JVM options to launch configurations of Main classes in order to be able to run from within the IDE:
 
 ```
---add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED
+--enable-preview
 ```
 
 # Usage
