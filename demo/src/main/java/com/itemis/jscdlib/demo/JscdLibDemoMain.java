@@ -1,6 +1,7 @@
 package com.itemis.jscdlib.demo;
 
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.itemis.jscdlib.JScdLib;
 
@@ -52,7 +53,7 @@ public class JscdLibDemoMain {
         private final Scanner scanner;
 
         public InputSupplier() {
-            scanner = new Scanner(System.in);
+            scanner = new Scanner(System.in, UTF_8);
         }
 
         @Override

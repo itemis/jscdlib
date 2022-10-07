@@ -10,5 +10,5 @@ Building with Maven >= 3.8.4 is recommended. Java 17 is required in order for th
 This demo requires Java 17.  
 
 ```
-java --add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.3.0-SNAPSHOT-shaded.jar
+java --add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.3.0-shaded.jar
 ```
