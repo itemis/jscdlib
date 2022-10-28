@@ -20,15 +20,7 @@ jobs:
           java-package: 'jdk'
           java-version: '17'
           check-latest: true
-      - name: Download Dependencies
-        run: mvn -U dependency:resolve-plugins dependency:go-offline
-      - name: Cache Maven Dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          cache: 'maven'
       - name: Build & Test
-        run: mvn -o --batch-mode clean verify
-      
+        run: |
+          mvn -B -U clean verify package
