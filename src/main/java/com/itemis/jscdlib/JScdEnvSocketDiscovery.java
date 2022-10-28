@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -61,7 +62,8 @@ public final class JScdEnvSocketDiscovery implements JScdSocketDiscovery {
             LOG.debug("Not found. Trying environment variable '" + GNUPGHOME_ENV_KEY + "'");
             rawResultPath = System.getenv(GNUPGHOME_ENV_KEY);
             if (rawResultPath == null) {
-                LOG.error("Neither system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' nor environment variable '" + GNUPGHOME_ENV_KEY
+                LOG.error("Neither system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' nor environment variable '"
+                    + GNUPGHOME_ENV_KEY
                     + "' are set. Cannot determine scdaemon socket file name.");
                 throw new JScdException(JScdProblems.JSCD_GENERAL_ERROR, ": Could not determine scdaemon socket file");
             }
@@ -73,6 +75,7 @@ public final class JScdEnvSocketDiscovery implements JScdSocketDiscovery {
         }
 
         try {
+            System.err.println(Charset.defaultCharset());
             result = Paths.get(rawResultPath);
             if (!Files.isRegularFile(result)) {
                 LOG.error(result + " is not a valid socket file.");
