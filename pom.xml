@@ -76,7 +76,7 @@
         <arch.unit.version>1.0.0</arch.unit.version>
         <fluffyj.version>1.11.0</fluffyj.version>
         <fluffyj-tests.version>1.6.0</fluffyj-tests.version>
-        <fluffyj-memory.version>1.2.0</fluffyj-memory.version>
+        <fluffyj-memory.version>1.2.1</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <custom.jvm.options>
             --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
