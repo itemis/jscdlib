@@ -5,10 +5,8 @@ import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
+import static java.lang.foreign.MemoryAddress.NULL;
 import static java.util.Objects.requireNonNull;
-import static jdk.incubator.foreign.CLinker.toJavaString;
-import static jdk.incubator.foreign.MemoryAddress.NULL;
-import static jdk.incubator.foreign.ResourceScope.newConfinedScope;
 
 import com.google.common.collect.ImmutableSet;
 import com.itemis.fluffyj.memory.api.FluffyPointer;
@@ -19,11 +17,10 @@ import com.itemis.jscdlib.problem.JScdProblems;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.MemorySession;
 import java.util.Set;
 import java.util.function.Consumer;
-
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
 
 /**
  * Provides convenient Java versions of libassuan based functionality.
@@ -41,7 +38,7 @@ public final class AssuanLibHandle implements AutoCloseable {
     private final FluffyPointer ctxPtr;
     private final MemoryAddress ctxAddr;
     private final AssuanLibNative nativeBridge;
-    private final ResourceScope myScope;
+    private final MemorySession mySession;
 
     /**
      * Create a new instance and initialize resources. Be aware that after construction, this object
@@ -58,12 +55,12 @@ public final class AssuanLibHandle implements AutoCloseable {
         requireNonNull(socketDiscovery, "socketDiscovery");
 
         try {
-            myScope = newConfinedScope();
-            ctxPtr = pointer().allocate(myScope);
+            mySession = MemorySession.openConfined();
+            ctxPtr = pointer().allocate(mySession);
             throwIfNoSuccess(nativeBridge.assuanNew(ctxPtr.address()));
             ctxAddr = ctxPtr.getValue();
             var socketName =
-                segment().of(socketDiscovery.discover().toString()).allocate(myScope).address();
+                segment().of(socketDiscovery.discover().toString()).allocate(mySession).address();
             throwIfNoSuccess(nativeBridge.assuanSocketConnect(ctxAddr, socketName,
                 ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
         } catch (Throwable t) {
@@ -92,12 +89,14 @@ public final class AssuanLibHandle implements AutoCloseable {
     public void sendCommand(String command, Consumer<String> responseConsumer, Consumer<String> statusConsumer) {
         var callback = new TransactCallback(responseConsumer, statusConsumer);
 
-        try (var transactScope = newConfinedScope()) {
-            var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactScope);
-            var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactScope);
-            var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactScope);
-            var cmdAddr = segment().of(command).allocate(transactScope).address();
-            throwIfNoSuccess(nativeBridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL, statusCbPtr, NULL));
+        try (var transactSession = MemorySession.openConfined()) {
+            var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactSession).address();
+            var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactSession).address();
+            var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactSession).address();
+            var cmdAddr = segment().of(command).allocate(transactSession).address();
+            throwIfNoSuccess(
+                nativeBridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
+                    statusCbPtr, NULL));
         }
     }
 
@@ -106,18 +105,19 @@ public final class AssuanLibHandle implements AutoCloseable {
      * used anymore.
      */
     @Override
-    public final void close() {
+    public void close() {
         if (ctxAddr != null) {
-            if (myScope.isAlive()) {
+            if (mySession.isAlive()) {
                 synchronized (this) {
-                    if (myScope.isAlive()) {
+                    if (mySession.isAlive()) {
                         try {
                             nativeBridge.assuanRelease(ctxAddr);
                         } catch (Throwable t) {
                             LOG.warn(
-                                "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: " + pretty(t));
+                                "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
+                                    + pretty(t));
                         } finally {
-                            myScope.close();
+                            mySession.close();
                         }
                     }
                 }
@@ -146,7 +146,7 @@ public final class AssuanLibHandle implements AutoCloseable {
         }
 
         public int data_cb(MemoryAddress allLines, MemoryAddress currentLine, long lineLength) {
-            responseConsumer.accept(toJavaString(currentLine));
+            responseConsumer.accept(currentLine.getUtf8String(0));
             return SUCCESS;
         }
 
@@ -155,7 +155,7 @@ public final class AssuanLibHandle implements AutoCloseable {
         }
 
         public int status_cb(MemoryAddress allLines, MemoryAddress currentLine) {
-            statusConsumer.accept(toJavaString(currentLine));
+            statusConsumer.accept(currentLine.getUtf8String(0));
             return SUCCESS;
         }
     }

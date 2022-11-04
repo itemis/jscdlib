@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -75,7 +74,6 @@ public final class JScdEnvSocketDiscovery implements JScdSocketDiscovery {
         }
 
         try {
-            System.err.println(Charset.defaultCharset());
             result = Paths.get(rawResultPath);
             if (!Files.isRegularFile(result)) {
                 LOG.error(result + " is not a valid socket file.");

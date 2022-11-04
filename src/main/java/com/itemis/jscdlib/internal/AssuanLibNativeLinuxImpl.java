@@ -1,52 +1,52 @@
 package com.itemis.jscdlib.internal;
 
-import static jdk.incubator.foreign.CLinker.C_INT;
-import static jdk.incubator.foreign.CLinker.C_POINTER;
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_INT;
 
-import com.itemis.fluffyj.memory.NativeMethodHandle;
+import com.itemis.fluffyj.memory.FluffyNativeMethodHandle;
 import com.itemis.jscdlib.AssuanLibNative;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.SymbolLookup;
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.SymbolLookup;
 
 public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNative {
 
     private static final Logger LOG = LoggerFactory.getLogger(AssuanLibNativeLinuxImpl.class);
 
-    private final NativeMethodHandle<Long> assuanNew;
-    private final NativeMethodHandle<Long> assuanRelease;
-    private final NativeMethodHandle<Long> assuanSocketConnect;
-    private final NativeMethodHandle<Long> assuanTransact;
+    private final FluffyNativeMethodHandle<Long> assuanNew;
+    private final FluffyNativeMethodHandle<Long> assuanRelease;
+    private final FluffyNativeMethodHandle<Long> assuanSocketConnect;
+    private final FluffyNativeMethodHandle<Long> assuanTransact;
 
     public AssuanLibNativeLinuxImpl() {
         var lib = loadLib();
 
-        assuanNew = NativeMethodHandle
+        assuanNew = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_new")
-            .args(C_POINTER);
+            .args(ADDRESS);
 
-        assuanRelease = NativeMethodHandle
+        assuanRelease = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_release")
-            .args(C_POINTER);
+            .args(ADDRESS);
 
-        assuanSocketConnect = NativeMethodHandle
+        assuanSocketConnect = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_socket_connect")
-            .args(C_POINTER, C_POINTER, C_INT, C_INT);
+            .args(ADDRESS, ADDRESS, JAVA_INT, JAVA_INT);
 
-        assuanTransact = NativeMethodHandle
+        assuanTransact = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("assuan_transact")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER, C_POINTER);
+            .args(ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS);
     }
 
     @Override
@@ -65,9 +65,11 @@ public class AssuanLibNativeLinuxImpl extends NativeBase implements AssuanLibNat
     }
 
     @Override
-    public long assuanTransact(MemoryAddress ctx, MemoryAddress command, MemoryAddress data_cb, MemoryAddress data_cb_arg, MemoryAddress inquire_cb,
+    public long assuanTransact(MemoryAddress ctx, MemoryAddress command, MemoryAddress data_cb,
+            MemoryAddress data_cb_arg, MemoryAddress inquire_cb,
             MemoryAddress inquire_cb_arg, MemoryAddress status_cb, MemoryAddress status_cb_arg) {
-        return callNativeFunction(() -> assuanTransact.call(ctx, command, data_cb, data_cb_arg, inquire_cb, inquire_cb_arg, status_cb, status_cb_arg));
+        return callNativeFunction(() -> assuanTransact.call(ctx, command, data_cb, data_cb_arg, inquire_cb,
+            inquire_cb_arg, status_cb, status_cb_arg));
     }
 
     private final SymbolLookup loadLib() {

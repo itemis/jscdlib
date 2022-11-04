@@ -88,6 +88,13 @@ public enum JScdProblems
             "No device attached to the system"),
 
     /**
+     * 0x6000113 - Unknown IPC command
+     */
+    GPG_ERR_ASS_UNKNOWN_CMD(
+            0x6000113L,
+            "Unknown IPC command"),
+
+    /**
      * 0x90000000 - Encountered an error
      */
     JSCD_GENERAL_ERROR(
@@ -126,13 +133,15 @@ public enum JScdProblems
      * @throws JScdException if the code is unknown.
      */
     public static JScdProblem fromError(long errorCode) {
-        var problemCandidates = Arrays.stream(JScdProblems.values()).filter(problem -> (problem.errorCode == errorCode)).toList();
+        var problemCandidates =
+            Arrays.stream(JScdProblems.values()).filter(problem -> (problem.errorCode == errorCode)).toList();
 
         if (problemCandidates.isEmpty()) {
             throw new JScdException(UNKNOWN_ERROR_CODE, ": 0x" + Long.toHexString(errorCode).toUpperCase());
         }
         if (problemCandidates.size() > 1) {
-            throw new JScdException(IMPLEMENTATION_ERROR, ": Encountered more than one problem with the same error code.");
+            throw new JScdException(IMPLEMENTATION_ERROR,
+                ": Encountered more than one problem with the same error code.");
         }
         return problemCandidates.get(0);
     }

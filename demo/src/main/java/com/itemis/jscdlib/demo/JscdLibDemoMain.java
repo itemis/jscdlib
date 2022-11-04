@@ -4,6 +4,7 @@ import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.itemis.jscdlib.JScdLib;
+import com.itemis.jscdlib.problem.JScdException;
 
 import java.util.List;
 import java.util.Scanner;
@@ -18,7 +19,11 @@ public class JscdLibDemoMain {
         try (var assuanHandle = JScdLib.constructAssuanHandle(); var inputSup = new InputSupplier()) {
             var cmd = inputSup.get().trim();
             while (!QUIT_CMDS.contains(cmd.toLowerCase())) {
-                assuanHandle.sendCommand(cmd, System.out::println, System.out::println);
+                try {
+                    assuanHandle.sendCommand(cmd, System.out::println, System.out::println);
+                } catch (JScdException e) {
+                    System.err.println("Error: " + e.problem().description());
+                }
                 cmd = inputSup.get().trim();
             }
             System.out.println("Exiting..");

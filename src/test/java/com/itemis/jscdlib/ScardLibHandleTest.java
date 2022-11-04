@@ -1,17 +1,15 @@
 package com.itemis.jscdlib;
 
 import static ch.qos.logback.classic.Level.WARN;
-import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static com.itemis.fluffyj.memory.api.FluffyPointer.FLUFFY_POINTER_BYTE_ORDER;
 import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
 import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_MEMORY;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_S_SUCCESS;
-import static jdk.incubator.foreign.MemoryAddress.NULL;
-import static jdk.incubator.foreign.MemoryLayouts.ADDRESS;
+import static java.lang.foreign.MemoryAddress.NULL;
+import static java.lang.foreign.ValueLayout.ADDRESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,6 +25,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.itemis.fluffyj.memory.FluffyMemory;
 import com.itemis.fluffyj.memory.internal.StringSegment;
 import com.itemis.fluffyj.tests.FluffyTestHelper;
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
@@ -38,15 +37,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.MemorySession;
+import java.lang.foreign.ValueLayout;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
 
 public class ScardLibHandleTest {
 
@@ -60,7 +60,7 @@ public class ScardLibHandleTest {
 
     private SCardMethodInvocations invocations;
     private ScardLibNative nativeMock;
-    private ResourceScope myScope;
+    private MemorySession mySession;
 
     private SCardLibHandle underTest;
 
@@ -68,7 +68,7 @@ public class ScardLibHandleTest {
     public void setUp() {
         nativeMock = mock(ScardLibNative.class);
         invocations = new SCardMethodInvocations();
-        myScope = ResourceScope.newConfinedScope();
+        mySession = MemorySession.openConfined();
 
         setupAllMethodsSuccess();
 
@@ -85,11 +85,11 @@ public class ScardLibHandleTest {
             }
         }
 
-        if (myScope != null && myScope.isAlive()) {
+        if (mySession != null && mySession.isAlive()) {
             try {
-                myScope.close();
+                mySession.close();
             } catch (Exception e) {
-                LOG.warn("Possible ressource leak. Could not close test memory scope.", e);
+                LOG.warn("Possible ressource leak. Could not close test memory session.", e);
             }
         }
     }
@@ -139,7 +139,8 @@ public class ScardLibHandleTest {
     public void when_no_readers_are_available_cleanup_correctly() {
         setupAvailableReaders(SCARD_E_NO_READERS_AVAILABLE);
         underTest.listReaders();
-        assertThat(invocations.readerListPtr).describedAs("The readerListPtr must be set even if listReaders returns no readers.").isNotNull();
+        assertThat(invocations.readerListPtr)
+            .describedAs("The readerListPtr must be set even if listReaders returns no readers.").isNotNull();
         verify(nativeMock).sCardFreeMemory(invocations.hContext, invocations.readerListPtr);
         verify(nativeMock).sCardReleaseContext(invocations.hContext);
     }
@@ -171,9 +172,11 @@ public class ScardLibHandleTest {
         assertThatNoException().isThrownBy(() -> underTest.listReaders());
 
         var inOrder = inOrder(nativeMock);
-        inOrder.verify(nativeMock).sCardEstablishContext(eq(PCSC_SCOPE_SYSTEM), same(NULL), same(NULL), any(MemoryAddress.class));
+        inOrder.verify(nativeMock).sCardEstablishContext(eq(PCSC_SCOPE_SYSTEM), same(NULL), same(NULL),
+            any(MemoryAddress.class));
         inOrder.verify(nativeMock)
-            .sCardListReadersA(eq(invocations.hContext), eq(SCARD_ALL_READERS), any(MemoryAddress.class), any(MemoryAddress.class));
+            .sCardListReadersA(eq(invocations.hContext), eq(SCARD_ALL_READERS), any(MemoryAddress.class),
+                any(MemoryAddress.class));
         inOrder.verify(nativeMock).sCardFreeMemory(eq(invocations.hContext), eq(invocations.readerListPtr));
         inOrder.verify(nativeMock).sCardReleaseContext(eq(invocations.hContext));
     }
@@ -182,7 +185,8 @@ public class ScardLibHandleTest {
     public void list_readers_throws_jscdException_if_establish_context_fails() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         establishContextReturns(expectedProblem);
-        assertThatThrownBy(() -> underTest.listReaders()).as("Expected exception in case of an error in smart card native code.")
+        assertThatThrownBy(() -> underTest.listReaders())
+            .as("Expected exception in case of an error in smart card native code.")
             .isInstanceOf(JScdException.class)
             .hasFieldOrPropertyWithValue("problem", expectedProblem);
     }
@@ -191,7 +195,8 @@ public class ScardLibHandleTest {
     public void list_readers_throws_jscdException_if_scardListReaders_fails() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         setupAvailableReaders(expectedProblem);
-        assertThatThrownBy(() -> underTest.listReaders()).as("Expected exception in case of an error in smart card native code.")
+        assertThatThrownBy(() -> underTest.listReaders())
+            .as("Expected exception in case of an error in smart card native code.")
             .isInstanceOf(JScdException.class)
             .hasFieldOrPropertyWithValue("problem", expectedProblem);
     }
@@ -216,7 +221,8 @@ public class ScardLibHandleTest {
             }
         };
         establishContextReturns(errorWithUnknownErrorCode);
-        assertThatThrownBy(() -> underTest.listReaders()).as("Expected exception in case smart card native code returns an unknown error code.")
+        assertThatThrownBy(() -> underTest.listReaders())
+            .as("Expected exception in case smart card native code returns an unknown error code.")
             .isInstanceOf(JScdException.class)
             .hasFieldOrPropertyWithValue("problem", JScdProblems.UNKNOWN_ERROR_CODE);
     }
@@ -229,7 +235,8 @@ public class ScardLibHandleTest {
         assertDoesNotThrow(() -> underTest.listReaders());
 
         logAssert.assertLogContains(WARN,
-            "Possible ressource leak: Operation listReaders could not free memory. Reason: " + expectedProblem + ": " + expectedProblem.description());
+            "Possible ressource leak: Operation listReaders could not free memory. Reason: " + expectedProblem + ": "
+                + expectedProblem.description());
     }
 
     @Test
@@ -240,32 +247,51 @@ public class ScardLibHandleTest {
         assertDoesNotThrow(() -> underTest.listReaders());
 
         logAssert.assertLogContains(WARN,
-            "Possible ressource leak: Operation listReaders could not release scard context. Reason: " + expectedProblem + ": "
+            "Possible ressource leak: Operation listReaders could not release scard context. Reason: " + expectedProblem
+                + ": "
                 + expectedProblem.description());
     }
 
     private void establishContextReturns(JScdProblem expectedProblem) {
-        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
-            .thenReturn(expectedProblem.errorCode());
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
+        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
+            any(MemoryAddress.class)))
+                .thenReturn(expectedProblem.errorCode());
     }
 
     private void freeMemReturns(JScdProblem expectedProblem) {
-        when(nativeMock.sCardFreeMemory(any(MemoryAddress.class), any(MemoryAddress.class))).thenReturn(expectedProblem.errorCode());
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
+        when(nativeMock.sCardFreeMemory(any(MemoryAddress.class), any(MemoryAddress.class)))
+            .thenReturn(expectedProblem.errorCode());
     }
 
     private void releaseCtxReturns(JScdProblem expectedProblem) {
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
         when(nativeMock.sCardReleaseContext(any(MemoryAddress.class))).thenReturn(expectedProblem.errorCode());
     }
 
     private void setupAllMethodsSuccess() {
-        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
-            .thenAnswer(invocation -> {
-                var ctxPtr = invocation.getArgument(3, MemoryAddress.class).asSegment(ADDRESS.byteSize(), myScope);
-                var ctx = segment().of("sCardCtx lives here").allocate(myScope);
-                ctxPtr.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(ctx.address().toRawLongValue());
-                invocations.hContext = ctx.address();
-                return SCARD_S_SUCCESS.errorCode();
-            });
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
+        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
+            any(MemoryAddress.class)))
+                .thenAnswer(invocation -> {
+                    var ctx = segment().of("sCardCtx lives here").allocate(mySession);
+                    invocation.getArgument(3, MemoryAddress.class).set(ADDRESS, 0, ctx.address());
+                    invocations.hContext = ctx.address();
+                    return SCARD_S_SUCCESS.errorCode();
+                });
 
         setupAvailableReaders(SCARD_S_SUCCESS);
         freeMemReturns(SCARD_S_SUCCESS);
@@ -273,6 +299,10 @@ public class ScardLibHandleTest {
     }
 
     private void setupAvailableReaders(JScdProblem expectedProblem, String... readerNames) {
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
         when(nativeMock.sCardListReadersA(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class))).then(invocation -> {
                 var addrOfReaderListPtr = invocation.getArgument(2, MemoryAddress.class);
@@ -285,15 +315,15 @@ public class ScardLibHandleTest {
                 });
                 readerListMultiStringBuilder.append('\0');
                 var readerListMultiString = readerListMultiStringBuilder.toString();
-                var readerList = new StringSegment(readerListMultiString, myScope);
+                var readerList = new StringSegment(readerListMultiString, mySession);
 
-                var rawPtrToReaderList = addrOfReaderListPtr.asSegment(ADDRESS.byteSize(), myScope);
-                rawPtrToReaderList.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(readerList.address().toRawLongValue());
+                addrOfReaderListPtr.set(ADDRESS, 0, readerList.address());
 
-                var readerListLength = addrOfReaderListLength.asSegment(ADDRESS.byteSize(), myScope);
-                var r = pointer().to(addrOfReaderListLength).as(Integer.class).allocate(myScope);
-                assertThat(r.dereference()).as("Provided reader list length must be unset.").isEqualTo(SCARD_AUTOALLOCATE);
-                readerListLength.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putInt(readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
+                var r = FluffyMemory.pointer().to(addrOfReaderListLength).as(Integer.class).allocate(mySession);
+                assertThat(r.dereference()).as("Provided reader list length must be unset.")
+                    .isEqualTo(SCARD_AUTOALLOCATE);
+                addrOfReaderListLength.set(ValueLayout.JAVA_INT, 0,
+                    readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
 
                 invocations.readerListPtr = readerList.address();
                 return expectedProblem.errorCode();
