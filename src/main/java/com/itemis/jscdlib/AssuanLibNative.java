@@ -1,12 +1,11 @@
 package com.itemis.jscdlib;
 
-import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.MemoryAddress;
+import java.lang.foreign.MemoryAddress;
 
 /**
  * 1:1 translation of libassuan's functions into their Java counterparts. This may be used by higher
  * level convenience classes to provide an easy to use API for the functionality libassuan provides.
- * 
+ *
  * @see <a href=
  *      "https://gnupg.org/software/libassuan/index.html">https://gnupg.org/software/libassuan/index.html</a>
  */
@@ -14,18 +13,18 @@ public interface AssuanLibNative {
 
     /**
      * If you don’t know the server’s process ID (PID), pass ASSUAN_INVALID_PID.
-     * 
+     *
      * @see https://www.gnupg.org/documentation/manuals/assuan/Client-code.html
      */
-    public static final int ASSUAN_INVALID_PID = 0;
+    int ASSUAN_INVALID_PID = 0;
 
     /**
      * With flags set to ASSUAN_SOCKET_CONNECT_FDPASSING, sendmsg and recvmesg are used for input
      * and output and thereby enable the use of descriptor passing.
-     * 
+     *
      * @see https://www.gnupg.org/documentation/manuals/assuan/Client-code.html
      */
-    public static final int ASSUAN_SOCKET_CONNECT_FDPASSING = 1;
+    int ASSUAN_SOCKET_CONNECT_FDPASSING = 1;
 
     /**
      * Create a new assuan context with default arguments.
@@ -88,5 +87,6 @@ public interface AssuanLibNative {
      * @return gpg_error_t
      */
     long assuanTransact(MemoryAddress ctx, MemoryAddress command, MemoryAddress data_cb, MemoryAddress data_cb_arg,
-            MemoryAddress inquire_cb, MemoryAddress inquire_cb_arg, MemoryAddress status_cb, MemoryAddress status_cb_arg);
+            MemoryAddress inquire_cb, MemoryAddress inquire_cb_arg, MemoryAddress status_cb,
+            MemoryAddress status_cb_arg);
 }

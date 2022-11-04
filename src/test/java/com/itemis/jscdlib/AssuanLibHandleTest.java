@@ -2,20 +2,17 @@ package com.itemis.jscdlib;
 
 import static ch.qos.logback.classic.Level.WARN;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
-import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static com.itemis.fluffyj.memory.api.FluffyPointer.FLUFFY_POINTER_BYTE_ORDER;
 import static com.itemis.fluffyj.tests.FluffyTestHelper.assertNullArgNotAccepted;
 import static com.itemis.fluffyj.tests.exceptions.ExpectedExceptions.EXPECTED_CHECKED_EXCEPTION;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
 import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
-import static jdk.incubator.foreign.MemoryLayouts.ADDRESS;
+import static java.lang.foreign.ValueLayout.ADDRESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,12 +26,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
+import org.mockito.stubbing.Stubber;
 
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.MemorySession;
 import java.nio.file.Paths;
-
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
 
 public class AssuanLibHandleTest {
 
@@ -46,7 +44,7 @@ public class AssuanLibHandleTest {
     private AssuanLibNative nativeMock;
     private JScdEnvSocketDiscovery socketDiscoveryMock;
     private AssuanMethodInvocations invocations;
-    private ResourceScope testMemoryScope;
+    private MemorySession testMemorySession;
 
     private AssuanLibHandle underTest;
 
@@ -55,7 +53,7 @@ public class AssuanLibHandleTest {
         nativeMock = mock(AssuanLibNative.class);
         socketDiscoveryMock = mock(JScdEnvSocketDiscovery.class);
         invocations = new AssuanMethodInvocations();
-        testMemoryScope = ResourceScope.newConfinedScope();
+        testMemorySession = MemorySession.openConfined();
 
         when(socketDiscoveryMock.discover()).thenReturn(Paths.get("scdaemon.socket.file"));
 
@@ -132,7 +130,8 @@ public class AssuanLibHandleTest {
 
         underTest.sendCommand(expectedCommand, line -> System.out.println(line), line -> System.out.println(line));
 
-        verify(nativeMock).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class), eq(MemoryAddress.NULL),
+        verify(nativeMock).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class),
+            eq(MemoryAddress.NULL),
             any(MemoryAddress.class), eq(MemoryAddress.NULL), any(MemoryAddress.class), eq(MemoryAddress.NULL));
         assertThat(invocations.command).as("Unexpected command").isEqualTo(expectedCommand);
     }
@@ -158,7 +157,8 @@ public class AssuanLibHandleTest {
         assertDoesNotThrow(() -> underTest.close());
 
         logAssert.assertLogContains(WARN,
-            "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: " + pretty(EXPECTED_CHECKED_EXCEPTION));
+            "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
+                + pretty(EXPECTED_CHECKED_EXCEPTION));
     }
 
     @Test
@@ -177,31 +177,53 @@ public class AssuanLibHandleTest {
     }
 
     private void assuanNewReturns(Answer<Long> answer) {
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
         when(nativeMock.assuanNew(any(MemoryAddress.class))).thenAnswer(invocation -> {
-            var ctxPtrSegPtr = invocation.getArgument(0, MemoryAddress.class).asSegment(ADDRESS.byteSize(), testMemoryScope);
-            var ctxSeg = segment().of("Assuan ctx lives here").allocate(testMemoryScope);
-            ctxPtrSegPtr.asByteBuffer().order(FLUFFY_POINTER_BYTE_ORDER).putLong(ctxSeg.address().toRawLongValue());
+            var ctxPtrSegPtr = invocation.getArgument(0, MemoryAddress.class);
+            var ctxSeg = segment().of("Assuan ctx lives here").allocate(testMemorySession);
+            ctxPtrSegPtr.set(ADDRESS, 0, ctxSeg.address());
             invocations.ctx = ctxSeg.address();
             return answer.answer(invocation);
         });
     }
 
     private void assuanSocketConnectReturns(Answer<Long> answer) {
-        when(nativeMock.assuanSocketConnect(any(MemoryAddress.class), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID), eq(ASSUAN_SOCKET_CONNECT_FDPASSING)))
-            .thenAnswer(answer);
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
+        when(nativeMock.assuanSocketConnect(any(MemoryAddress.class), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
+            eq(ASSUAN_SOCKET_CONNECT_FDPASSING)))
+                .thenAnswer(answer);
     }
 
     private void assuanTransactReturns(Answer<Long> answer) {
-        when(nativeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
-            any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class))).thenAnswer(invocation -> {
-                var commandStrPtr = pointer().to(invocation.getArgument(1, MemoryAddress.class)).as(String.class).allocate(testMemoryScope);
-                invocations.command = commandStrPtr.dereference();
-                return answer.answer(invocation);
-            });
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        Mockito.mock(Object.class);
+
+        when(nativeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
+            any(MemoryAddress.class),
+            any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
+                .thenAnswer(invocation -> {
+                    invocations.command = invocation.getArgument(1, MemoryAddress.class).getUtf8String(0);
+                    return answer.answer(invocation);
+                });
     }
 
     private void assuanReleaseReturns(Answer<Void> answer) {
-        doAnswer(answer).when(nativeMock).assuanRelease(any(MemoryAddress.class));
+        // Workaround for
+        // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
+        var stubber = Mockito.doAnswer(answer);
+        try {
+            var whenMethod = Stubber.class.getMethod("when", Object.class);
+            ((AssuanLibNative) whenMethod.invoke(stubber, nativeMock)).assuanRelease(any(MemoryAddress.class));
+        } catch (Exception e) {
+            Assertions.fail("Could not mock call.", e);
+        }
     }
 
     private AssuanLibHandle constructUnderTest() {

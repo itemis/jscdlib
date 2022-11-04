@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>jscdlib</artifactId>
-    <version>0.4.1</version>
+    <version>0.5.0</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -47,8 +47,8 @@
     </scm>
 
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.release>17</maven.compiler.release>
+        <java.version>19</java.version>
+        <maven.compiler.release>19</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -63,12 +63,12 @@
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
         <guava.version>31.1-jre</guava.version>
-        <mockito.version>4.8.0</mockito.version>
+        <mockito.version>4.8.1</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>
         <spotbugs.plugin.version>4.7.2.1</spotbugs.plugin.version>
         <junit.version>5.9.1</junit.version>
         <jacoco.plugin.version>0.8.8</jacoco.plugin.version>
-        <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
+        <git-commit-id-plugin.version>5.0.0</git-commit-id-plugin.version>
         <assertj.version>3.23.1</assertj.version>
         <logback.version>1.4.4</logback.version>
         <equalsverifier.version>3.10</equalsverifier.version>
@@ -76,13 +76,10 @@
         <arch.unit.version>1.0.0</arch.unit.version>
         <fluffyj.version>1.11.0</fluffyj.version>
         <fluffyj-tests.version>1.6.0</fluffyj-tests.version>
-        <fluffyj-memory.version>1.1.4</fluffyj-memory.version>
+        <fluffyj-memory.version>1.2.0</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <custom.jvm.options>
-            --enable-native-access=ALL-UNNAMED
-            --add-modules=ALL-SYSTEM,jdk.incubator.foreign
-            --add-opens=java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.lang=ALL-UNNAMED
+            --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
 
@@ -286,8 +283,8 @@
                     <version>${spotbugs.plugin.version}</version>
                 </plugin>
                 <plugin>
-                    <groupId>pl.project13.maven</groupId>
-                    <artifactId>git-commit-id-plugin</artifactId>
+                    <groupId>io.github.git-commit-id</groupId>
+                    <artifactId>git-commit-id-maven-plugin</artifactId>
                     <version>${git-commit-id-plugin.version}</version>
                 </plugin>
                 <plugin>
@@ -313,8 +310,7 @@
                     <version>${maven-compiler-plugin.version}</version>
                     <configuration>
                         <compilerArgs>
-                            <compilerArg>--add-modules</compilerArg>
-                            <compilerArg>jdk.incubator.foreign</compilerArg>
+                            <compilerArg>--enable-preview</compilerArg>
                         </compilerArgs>
                     </configuration>
                 </plugin>
@@ -323,8 +319,8 @@
 
         <plugins>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <goals>

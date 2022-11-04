@@ -1,56 +1,58 @@
 package com.itemis.jscdlib.internal;
 
-import static jdk.incubator.foreign.CLinker.C_LONG_LONG;
-import static jdk.incubator.foreign.CLinker.C_POINTER;
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_LONG;
 
-import com.itemis.fluffyj.memory.NativeMethodHandle;
+import com.itemis.fluffyj.memory.FluffyNativeMethodHandle;
 import com.itemis.jscdlib.ScardLibNative;
 
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.SymbolLookup;
+import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.SymbolLookup;
 
 public class ScardLibNativeWinImpl extends NativeBase implements ScardLibNative {
 
-    private final NativeMethodHandle<Long> establishCtx;
-    private final NativeMethodHandle<Long> listReaders;
-    private final NativeMethodHandle<Long> freeMem;
-    private final NativeMethodHandle<Long> releaseCtx;
+    private final FluffyNativeMethodHandle<Long> establishCtx;
+    private final FluffyNativeMethodHandle<Long> listReaders;
+    private final FluffyNativeMethodHandle<Long> freeMem;
+    private final FluffyNativeMethodHandle<Long> releaseCtx;
 
     public ScardLibNativeWinImpl() {
         System.loadLibrary("winscard");
         var lib = SymbolLookup.loaderLookup();
-        establishCtx = NativeMethodHandle
+        establishCtx = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("SCardEstablishContext")
-            .args(C_LONG_LONG, C_POINTER, C_POINTER, C_POINTER);
+            .args(JAVA_LONG, ADDRESS, ADDRESS, ADDRESS);
 
-        listReaders = NativeMethodHandle
+        listReaders = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("SCardListReadersA")
-            .args(C_POINTER, C_POINTER, C_POINTER, C_POINTER);
+            .args(ADDRESS, ADDRESS, ADDRESS, ADDRESS);
 
-        freeMem = NativeMethodHandle
+        freeMem = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("SCardFreeMemory")
-            .args(C_POINTER, C_POINTER);
+            .args(ADDRESS, ADDRESS);
 
-        releaseCtx = NativeMethodHandle
+        releaseCtx = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
             .func("SCardReleaseContext")
-            .args(C_POINTER);
+            .args(ADDRESS);
     }
 
     @Override
-    public long sCardEstablishContext(long dwScope, MemoryAddress pvReserved1, MemoryAddress pvReserved2, MemoryAddress phContext) {
+    public long sCardEstablishContext(long dwScope, MemoryAddress pvReserved1, MemoryAddress pvReserved2,
+            MemoryAddress phContext) {
         return callNativeFunction(() -> establishCtx.call(dwScope, pvReserved1, pvReserved2, phContext));
     }
 
     @Override
-    public long sCardListReadersA(MemoryAddress hContext, MemoryAddress mszGroups, MemoryAddress mszReaders, MemoryAddress pcchReaders) {
+    public long sCardListReadersA(MemoryAddress hContext, MemoryAddress mszGroups, MemoryAddress mszReaders,
+            MemoryAddress pcchReaders) {
         return callNativeFunction(() -> listReaders.call(hContext, mszGroups, mszReaders, pcchReaders));
     }
 

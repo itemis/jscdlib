@@ -1,6 +1,6 @@
 package com.itemis.jscdlib;
 
-import jdk.incubator.foreign.MemoryAddress;
+import java.lang.foreign.MemoryAddress;
 
 /**
  * Implementations of this interface know how to call native smart card functions via OS libraries.
@@ -11,23 +11,23 @@ public interface ScardLibNative {
     /**
      * According to the spec, this is a null pointer.
      */
-    public static final MemoryAddress SCARD_ALL_READERS = MemoryAddress.NULL;
+    MemoryAddress SCARD_ALL_READERS = MemoryAddress.NULL;
 
     /**
      * Use this value to signal that a lib should automatically allocate memory for lists or arrays.
      */
-    public static final int SCARD_AUTOALLOCATE = -1;
+    int SCARD_AUTOALLOCATE = -1;
 
     /**
      * Database operations are performed within the domain of the user.
      */
-    public static final long PCSC_SCOPE_SYSTEM = 2;
+    long PCSC_SCOPE_SYSTEM = 2;
 
     /**
      * Database operations are performed within the domain of the system. The calling application
      * must have appropriate access permissions for any database actions.
      */
-    public static final long PCSC_SCOPE_USER = 0;
+    long PCSC_SCOPE_USER = 0;
 
     /**
      * See <a href=
@@ -41,7 +41,8 @@ public interface ScardLibNative {
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    long sCardEstablishContext(long dwScope, MemoryAddress pvReserved1, MemoryAddress pvReserved2, MemoryAddress phContext);
+    long sCardEstablishContext(long dwScope, MemoryAddress pvReserved1, MemoryAddress pvReserved2,
+            MemoryAddress phContext);
 
     /**
      * See <a href=
@@ -55,7 +56,8 @@ public interface ScardLibNative {
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    long sCardListReadersA(MemoryAddress hContext, MemoryAddress mszGroups, MemoryAddress mszReaders, MemoryAddress pcchReaders);
+    long sCardListReadersA(MemoryAddress hContext, MemoryAddress mszGroups, MemoryAddress mszReaders,
+            MemoryAddress pcchReaders);
 
     /**
      * See <a href=

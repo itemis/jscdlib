@@ -61,7 +61,8 @@ public final class JScdEnvSocketDiscovery implements JScdSocketDiscovery {
             LOG.debug("Not found. Trying environment variable '" + GNUPGHOME_ENV_KEY + "'");
             rawResultPath = System.getenv(GNUPGHOME_ENV_KEY);
             if (rawResultPath == null) {
-                LOG.error("Neither system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' nor environment variable '" + GNUPGHOME_ENV_KEY
+                LOG.error("Neither system property '" + JSCDLIB_SOCKET_FILE_PROP_KEY + "' nor environment variable '"
+                    + GNUPGHOME_ENV_KEY
                     + "' are set. Cannot determine scdaemon socket file name.");
                 throw new JScdException(JScdProblems.JSCD_GENERAL_ERROR, ": Could not determine scdaemon socket file");
             }
