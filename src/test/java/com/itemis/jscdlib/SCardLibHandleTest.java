@@ -2,9 +2,9 @@ package com.itemis.jscdlib;
 
 import static ch.qos.logback.classic.Level.WARN;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
-import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
-import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
+import static com.itemis.jscdlib.SCardLibHandle.PCSC_SCOPE_SYSTEM;
+import static com.itemis.jscdlib.SCardLibHandle.SCARD_ALL_READERS;
+import static com.itemis.jscdlib.SCardLibHandle.SCARD_AUTOALLOCATE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_MEMORY;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_S_SUCCESS;
@@ -29,6 +29,7 @@ import com.itemis.fluffyj.memory.FluffyMemory;
 import com.itemis.fluffyj.memory.internal.StringSegment;
 import com.itemis.fluffyj.tests.FluffyTestHelper;
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
+import com.itemis.jscdlib.internal.ScardLibNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
@@ -48,9 +49,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-public class ScardLibHandleTest {
+public class SCardLibHandleTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ScardLibHandleTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SCardLibHandleTest.class);
 
     private static final String READER_ONE = "readerOne";
     private static final String READER_TWO = "readerTwo";
@@ -59,20 +60,20 @@ public class ScardLibHandleTest {
     FluffyTestAppender logAssert = new FluffyTestAppender();
 
     private SCardMethodInvocations invocations;
-    private ScardLibNative nativeMock;
+    private ScardLibNativeBridge bridgeMock;
     private MemorySession mySession;
 
     private SCardLibHandle underTest;
 
     @BeforeEach
     public void setUp() {
-        nativeMock = mock(ScardLibNative.class);
+        bridgeMock = mock(ScardLibNativeBridge.class);
         invocations = new SCardMethodInvocations();
         mySession = MemorySession.openConfined();
 
         setupAllMethodsSuccess();
 
-        underTest = new SCardLibHandle(nativeMock);
+        underTest = new SCardLibHandle(bridgeMock);
     }
 
     @AfterEach
@@ -141,24 +142,24 @@ public class ScardLibHandleTest {
         underTest.listReaders();
         assertThat(invocations.readerListPtr)
             .describedAs("The readerListPtr must be set even if listReaders returns no readers.").isNotNull();
-        verify(nativeMock).sCardFreeMemory(invocations.hContext, invocations.readerListPtr);
-        verify(nativeMock).sCardReleaseContext(invocations.hContext);
+        verify(bridgeMock).sCardFreeMemory(invocations.hContext, invocations.readerListPtr);
+        verify(bridgeMock).sCardReleaseContext(invocations.hContext);
     }
 
     @Test
     public void when_establish_ctx_fails_skip_cleanup() {
         establishContextReturns(SCARD_E_NO_MEMORY);
         assertThatThrownBy(() -> underTest.listReaders()).isInstanceOf(JScdException.class);
-        verify(nativeMock, never()).sCardFreeMemory(nullable(MemoryAddress.class), nullable(MemoryAddress.class));
-        verify(nativeMock, never()).sCardReleaseContext(nullable(MemoryAddress.class));
+        verify(bridgeMock, never()).sCardFreeMemory(nullable(MemoryAddress.class), nullable(MemoryAddress.class));
+        verify(bridgeMock, never()).sCardReleaseContext(nullable(MemoryAddress.class));
     }
 
     @Test
     public void when_establish_listReaders_fails_skip_freeMem() {
         setupAvailableReaders(SCARD_E_NO_MEMORY);
         assertThatThrownBy(() -> underTest.listReaders()).isInstanceOf(JScdException.class);
-        verify(nativeMock, never()).sCardFreeMemory(nullable(MemoryAddress.class), nullable(MemoryAddress.class));
-        verify(nativeMock).sCardReleaseContext(any(MemoryAddress.class));
+        verify(bridgeMock, never()).sCardFreeMemory(nullable(MemoryAddress.class), nullable(MemoryAddress.class));
+        verify(bridgeMock).sCardReleaseContext(any(MemoryAddress.class));
     }
 
     /**
@@ -171,14 +172,14 @@ public class ScardLibHandleTest {
 
         assertThatNoException().isThrownBy(() -> underTest.listReaders());
 
-        var inOrder = inOrder(nativeMock);
-        inOrder.verify(nativeMock).sCardEstablishContext(eq(PCSC_SCOPE_SYSTEM), same(NULL), same(NULL),
+        var inOrder = inOrder(bridgeMock);
+        inOrder.verify(bridgeMock).sCardEstablishContext(eq(PCSC_SCOPE_SYSTEM), same(NULL), same(NULL),
             any(MemoryAddress.class));
-        inOrder.verify(nativeMock)
-            .sCardListReadersA(eq(invocations.hContext), eq(SCARD_ALL_READERS), any(MemoryAddress.class),
+        inOrder.verify(bridgeMock)
+            .sCardListReaders(eq(invocations.hContext), eq(SCARD_ALL_READERS), any(MemoryAddress.class),
                 any(MemoryAddress.class));
-        inOrder.verify(nativeMock).sCardFreeMemory(eq(invocations.hContext), eq(invocations.readerListPtr));
-        inOrder.verify(nativeMock).sCardReleaseContext(eq(invocations.hContext));
+        inOrder.verify(bridgeMock).sCardFreeMemory(eq(invocations.hContext), eq(invocations.readerListPtr));
+        inOrder.verify(bridgeMock).sCardReleaseContext(eq(invocations.hContext));
     }
 
     @Test
@@ -257,7 +258,7 @@ public class ScardLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
+        when(bridgeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class)))
                 .thenReturn(expectedProblem.errorCode());
     }
@@ -267,7 +268,7 @@ public class ScardLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.sCardFreeMemory(any(MemoryAddress.class), any(MemoryAddress.class)))
+        when(bridgeMock.sCardFreeMemory(any(MemoryAddress.class), any(MemoryAddress.class)))
             .thenReturn(expectedProblem.errorCode());
     }
 
@@ -276,7 +277,7 @@ public class ScardLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.sCardReleaseContext(any(MemoryAddress.class))).thenReturn(expectedProblem.errorCode());
+        when(bridgeMock.sCardReleaseContext(any(MemoryAddress.class))).thenReturn(expectedProblem.errorCode());
     }
 
     private void setupAllMethodsSuccess() {
@@ -284,7 +285,7 @@ public class ScardLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
+        when(bridgeMock.sCardEstablishContext(anyLong(), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class)))
                 .thenAnswer(invocation -> {
                     var ctx = segment().of("sCardCtx lives here").allocate(mySession);
@@ -303,7 +304,7 @@ public class ScardLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.sCardListReadersA(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
+        when(bridgeMock.sCardListReaders(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class))).then(invocation -> {
                 var addrOfReaderListPtr = invocation.getArgument(2, MemoryAddress.class);
                 var addrOfReaderListLength = invocation.getArgument(3, MemoryAddress.class);

@@ -1,15 +1,19 @@
 package com.itemis.jscdlib;
 
+import static java.lang.foreign.SymbolLookup.libraryLookup;
+
+import com.itemis.jscdlib.discovery.JScdEnvSocketDiscovery;
+import com.itemis.jscdlib.discovery.JScdGpgConfSocketDiscovery;
+import com.itemis.jscdlib.internal.OsDetector;
+import com.itemis.jscdlib.internal.ScDaemonNativeBridge;
+import com.itemis.jscdlib.internal.ScardLibNativeBridge;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.itemis.jscdlib.internal.AssuanLibNativeLinuxImpl;
-import com.itemis.jscdlib.internal.AssuanLibNativeMacImpl;
-import com.itemis.jscdlib.internal.AssuanLibNativeWinImpl;
-import com.itemis.jscdlib.internal.ScardLibNativeLinuxImpl;
-import com.itemis.jscdlib.internal.ScardLibNativeMacImpl;
-import com.itemis.jscdlib.internal.ScardLibNativeWinImpl;
-import com.itemis.jscdlib.internal.OsDetector;
+import java.lang.foreign.MemorySession;
+import java.lang.foreign.SymbolLookup;
+import java.util.Set;
 
 /**
  * Entrypoint for the JScdLib.
@@ -38,10 +42,15 @@ public final class JScdLib {
         }
     }
 
+    private static final Set<String> LINUX_SCDAEMON_LIB_CANDIDATES = Set.of("libassuan6-0", "libassuan.so");
+    // See
+    // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
+    private static final Set<String> LINUX_SCARD_LIB_CANDIDATES = Set.of("libpcsclite.so.1", "libpcsclite.so");
+
     /**
      * <p>
-     * Create a new handle. The handle will use the {@link ScardLibNative} implementation appropriate
-     * for the current OS.
+     * Create a new handle. The handle will use the {@link ScardLibNative} implementation
+     * appropriate for the current OS.
      * </p>
      * <p>
      * <b>Be aware:</b> The handle does hold resources and should therefore be closed when not
@@ -51,42 +60,67 @@ public final class JScdLib {
      * @return A new instance of {@link SCardLibHandle}.
      */
     public static SCardLibHandle constructSCardHandle() {
-        ScardLibNative nativeImpl = null;
+        ScardLibNativeBridge bridge = null;
 
         if (IS_WINDOWS) {
-            nativeImpl = new ScardLibNativeWinImpl();
+            bridge = new ScardLibNativeBridge(session -> libraryLookup("winscard", session));
         } else if (IS_MAC) {
-            nativeImpl = new ScardLibNativeMacImpl();
+            // See
+            // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L208
+            bridge = new ScardLibNativeBridge(
+                session -> libraryLookup("/System/Library/Frameworks/PCSC.framework/PCSC", session));
         } else {
-            nativeImpl = new ScardLibNativeLinuxImpl();
+            bridge = new ScardLibNativeBridge(session -> loadLinuxLib(LINUX_SCARD_LIB_CANDIDATES, session));
         }
 
-        return new SCardLibHandle(nativeImpl);
+        return new SCardLibHandle(bridge);
     }
 
     /**
      * <p>
-     * Create a new handle. The handle will use the {@link AssuanLibNative} implementation appropriate
-     * for the current OS.
+     * Create a new handle. The handle will use the native implementation appropriate for the
+     * current OS.
      * </p>
      * <p>
      * <b>Be aware:</b> The handle does hold resources and should therefore be closed when not
      * needed anymore in order to prevent resource leaks.
      * </p>
      *
-     * @return A new instance of {@link AssuanLibHandle}.
+     * @return A new instance of {@link ScDaemonHandle}.
      */
-    public static AssuanLibHandle constructAssuanHandle() {
-        AssuanLibNative nativeImpl = null;
+    public static ScDaemonHandle constructScDaemonHandle() {
+        ScDaemonNativeBridge bridge = null;
 
         if (IS_WINDOWS) {
-            nativeImpl = new AssuanLibNativeWinImpl();
+            bridge = new ScDaemonNativeBridge(session -> libraryLookup("libassuan6-0", session));
         } else if (IS_MAC) {
-            nativeImpl = new AssuanLibNativeMacImpl();
+            bridge = new ScDaemonNativeBridge(session -> libraryLookup("libassuan", session));
         } else {
-            nativeImpl = new AssuanLibNativeLinuxImpl();
+            bridge = new ScDaemonNativeBridge(session -> loadLinuxLib(LINUX_SCDAEMON_LIB_CANDIDATES, session));
         }
 
-        return new AssuanLibHandle(nativeImpl, new JScdGpgConfSocketDiscovery(new JScdEnvSocketDiscovery()));
+        return new ScDaemonHandle(bridge, new JScdGpgConfSocketDiscovery(new JScdEnvSocketDiscovery()));
+    }
+
+    private static SymbolLookup loadLinuxLib(Iterable<String> libNameCandidates, MemorySession session) {
+        SymbolLookup result = null;
+
+        var candidateIter = libNameCandidates.iterator();
+        while (candidateIter.hasNext()) {
+            var candidate = candidateIter.next();
+            try {
+                result = libraryLookup(candidate, session);
+            } catch (IllegalArgumentException e) {
+                var msg = "Could not get a handle on lib.";
+                if (candidateIter.hasNext()) {
+                    LOG.debug(msg, e);
+                } else {
+                    LOG.error(msg + " Giving up.", e);
+                    throw e;
+                }
+            }
+        }
+
+        return result;
     }
 }

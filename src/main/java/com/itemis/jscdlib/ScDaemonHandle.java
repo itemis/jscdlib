@@ -3,13 +3,13 @@ package com.itemis.jscdlib;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
-import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
 import static java.lang.foreign.MemoryAddress.NULL;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
 import com.itemis.fluffyj.memory.api.FluffyPointer;
+import com.itemis.jscdlib.discovery.JScdSocketDiscovery;
+import com.itemis.jscdlib.internal.ScDaemonNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
@@ -23,21 +23,30 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Provides convenient Java versions of libassuan based functionality.
- *
- * @see <a href=
- *      "https://gnupg.org/software/libassuan/index.html">https://gnupg.org/software/libassuan/index.html</a>
- *
+ * Provides a convenient Java interface to SCDaemon functionality.
  */
-public final class AssuanLibHandle implements AutoCloseable {
+public final class ScDaemonHandle implements AutoCloseable {
+    private static final Logger LOG = LoggerFactory.getLogger(ScDaemonHandle.class);
 
-    private static final Logger LOG = LoggerFactory.getLogger(AssuanLibHandle.class);
+    /**
+     * If you don’t know the server’s process ID (PID), pass ASSUAN_INVALID_PID.
+     *
+     * @see https://www.gnupg.org/documentation/manuals/assuan/Client-code.html
+     */
+    static final int ASSUAN_INVALID_PID = 0;
+    /**
+     * With flags set to ASSUAN_SOCKET_CONNECT_FDPASSING, sendmsg and recvmesg are used for input
+     * and output and thereby enable the use of descriptor passing.
+     *
+     * @see https://www.gnupg.org/documentation/manuals/assuan/Client-code.html
+     */
+    static final int ASSUAN_SOCKET_CONNECT_FDPASSING = 1;
 
     private static final Set<JScdProblem> NON_FATAL_PROBLEMS = ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS);
 
     private final FluffyPointer ctxPtr;
     private final MemoryAddress ctxAddr;
-    private final AssuanLibNative nativeBridge;
+    private final ScDaemonNativeBridge bridge;
     private final MemorySession mySession;
 
     /**
@@ -45,23 +54,22 @@ public final class AssuanLibHandle implements AutoCloseable {
      * holds resources, so it might be a bad idea to construct many instances of this object in
      * advance.
      *
-     * @param nativeBridge OS dependent implementation to use when calling low level library
-     *        functions.
+     * @param bridge OS dependent implementation to use when calling low level library functions.
      * @param socketDiscovery Used to determine the scdaemon socket file to use for communication to
      *        the daemon.
      */
-    public AssuanLibHandle(AssuanLibNative nativeBridge, JScdSocketDiscovery socketDiscovery) {
-        this.nativeBridge = requireNonNull(nativeBridge, "nativeBridge");
+    public ScDaemonHandle(ScDaemonNativeBridge bridge, JScdSocketDiscovery socketDiscovery) {
+        this.bridge = requireNonNull(bridge, "bridge");
         requireNonNull(socketDiscovery, "socketDiscovery");
 
         try {
             mySession = MemorySession.openConfined();
             ctxPtr = pointer().allocate(mySession);
-            throwIfNoSuccess(nativeBridge.assuanNew(ctxPtr.address()));
+            throwIfNoSuccess(bridge.assuanNew(ctxPtr.address()));
             ctxAddr = ctxPtr.getValue();
             var socketName =
                 segment().of(socketDiscovery.discover().toString()).allocate(mySession).address();
-            throwIfNoSuccess(nativeBridge.assuanSocketConnect(ctxAddr, socketName,
+            throwIfNoSuccess(bridge.assuanSocketConnect(ctxAddr, socketName,
                 ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
         } catch (Throwable t) {
             close();
@@ -95,7 +103,7 @@ public final class AssuanLibHandle implements AutoCloseable {
             var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactSession).address();
             var cmdAddr = segment().of(command).allocate(transactSession).address();
             throwIfNoSuccess(
-                nativeBridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
+                bridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
                     statusCbPtr, NULL));
         }
     }
@@ -111,13 +119,17 @@ public final class AssuanLibHandle implements AutoCloseable {
                 synchronized (this) {
                     if (mySession.isAlive()) {
                         try {
-                            nativeBridge.assuanRelease(ctxAddr);
+                            bridge.assuanRelease(ctxAddr);
                         } catch (Throwable t) {
                             LOG.warn(
                                 "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
                                     + pretty(t));
                         } finally {
-                            mySession.close();
+                            try {
+                                bridge.close();
+                            } finally {
+                                mySession.close();
+                            }
                         }
                     }
                 }
