@@ -3,15 +3,13 @@ package com.itemis.jscdlib;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static com.itemis.jscdlib.ScardLibNative.PCSC_SCOPE_SYSTEM;
-import static com.itemis.jscdlib.ScardLibNative.SCARD_ALL_READERS;
-import static com.itemis.jscdlib.ScardLibNative.SCARD_AUTOALLOCATE;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
 import static java.lang.foreign.MemoryAddress.NULL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
+import com.itemis.jscdlib.internal.ScardLibNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
 import com.itemis.jscdlib.problem.JScdProblems;
@@ -37,14 +35,36 @@ import java.util.Set;
 public final class SCardLibHandle implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SCardLibHandle.class);
+
+    /**
+     * According to the spec, this is a null pointer.
+     */
+    static final MemoryAddress SCARD_ALL_READERS = MemoryAddress.NULL;
+
+    /**
+     * Use this value to signal that a lib should automatically allocate memory for lists or arrays.
+     */
+    static final int SCARD_AUTOALLOCATE = -1;
+
+    /**
+     * Database operations are performed within the domain of the user.
+     */
+    static final long PCSC_SCOPE_SYSTEM = 2;
+
+    /**
+     * Database operations are performed within the domain of the system. The calling application
+     * must have appropriate access permissions for any database actions.
+     */
+    static final long PCSC_SCOPE_USER = 0;
+
     private static final Set<JScdProblem> NON_FATAL_PROBLEMS =
         ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
 
-    private final ScardLibNative nativeBridge;
+    private final ScardLibNativeBridge bridge;
     private final MemorySession mySession;
 
-    public SCardLibHandle(ScardLibNative nativeBridge) {
-        this.nativeBridge = requireNonNull(nativeBridge, "nativeBridge");
+    public SCardLibHandle(ScardLibNativeBridge bridge) {
+        this.bridge = requireNonNull(bridge, "bridge");
 
         mySession = MemorySession.openConfined();
     }
@@ -75,11 +95,11 @@ public final class SCardLibHandle implements AutoCloseable {
                 var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersSession);
 
                 throwIfNoSuccess(
-                    nativeBridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
+                    bridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
                 ctxEstablished = true;
 
                 var listReadersProblem = throwIfNoSuccess(
-                    nativeBridge.sCardListReadersA(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(),
+                    bridge.sCardListReaders(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(),
                         readerListLength.address()));
                 listReadersReturned = true;
                 ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
@@ -100,10 +120,10 @@ public final class SCardLibHandle implements AutoCloseable {
             } finally {
                 if (ctxEstablished) {
                     if (listReadersReturned) {
-                        logIfNoSuccess(nativeBridge.sCardFreeMemory(ctxPtrSeg.getValue(), ptrToFirstEntryInReaderList),
+                        logIfNoSuccess(bridge.sCardFreeMemory(ctxPtrSeg.getValue(), ptrToFirstEntryInReaderList),
                             "Possible ressource leak: Operation listReaders could not free memory.");
                     }
-                    logIfNoSuccess(nativeBridge.sCardReleaseContext(ctxPtrSeg.getValue()),
+                    logIfNoSuccess(bridge.sCardReleaseContext(ctxPtrSeg.getValue()),
                         "Possible ressource leak: Operation listReaders could not release scard context.");
                 }
             }
@@ -147,6 +167,8 @@ public final class SCardLibHandle implements AutoCloseable {
                     } catch (Throwable t) {
                         LOG.warn(
                             "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
+                    } finally {
+                        bridge.close();
                     }
                 }
             }

@@ -16,11 +16,11 @@ public class JscdLibDemoMain {
 
     public static void main(String[] args) {
         printAvailableReaders();
-        try (var assuanHandle = JScdLib.constructAssuanHandle(); var inputSup = new InputSupplier()) {
+        try (var scdaemonHandle = JScdLib.constructScDaemonHandle(); var inputSup = new InputSupplier()) {
             var cmd = inputSup.get().trim();
             while (!QUIT_CMDS.contains(cmd.toLowerCase())) {
                 try {
-                    assuanHandle.sendCommand(cmd, System.out::println, System.out::println);
+                    scdaemonHandle.sendCommand(cmd, System.out::println, System.out::println);
                 } catch (JScdException e) {
                     System.err.println("Error: " + e.problem().description());
                 }
