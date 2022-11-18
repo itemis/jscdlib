@@ -5,8 +5,8 @@ import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static com.itemis.fluffyj.tests.FluffyTestHelper.assertNullArgNotAccepted;
 import static com.itemis.fluffyj.tests.exceptions.ExpectedExceptions.EXPECTED_CHECKED_EXCEPTION;
-import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_INVALID_PID;
-import static com.itemis.jscdlib.AssuanLibNative.ASSUAN_SOCKET_CONNECT_FDPASSING;
+import static com.itemis.jscdlib.ScDaemonHandle.ASSUAN_INVALID_PID;
+import static com.itemis.jscdlib.ScDaemonHandle.ASSUAN_SOCKET_CONNECT_FDPASSING;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,6 +18,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.itemis.fluffyj.tests.logging.FluffyTestAppender;
+import com.itemis.jscdlib.discovery.JScdEnvSocketDiscovery;
+import com.itemis.jscdlib.internal.ScDaemonNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblems;
 
@@ -34,23 +36,23 @@ import java.lang.foreign.MemoryAddress;
 import java.lang.foreign.MemorySession;
 import java.nio.file.Paths;
 
-public class AssuanLibHandleTest {
+public class ScDaemonHandleTest {
 
     private static final Answer<Long> SUCCESS = invocation -> JScdProblems.SCARD_S_SUCCESS.errorCode();
 
     @RegisterExtension
     FluffyTestAppender logAssert = new FluffyTestAppender();
 
-    private AssuanLibNative nativeMock;
+    private ScDaemonNativeBridge bridgeMock;
     private JScdEnvSocketDiscovery socketDiscoveryMock;
     private AssuanMethodInvocations invocations;
     private MemorySession testMemorySession;
 
-    private AssuanLibHandle underTest;
+    private ScDaemonHandle underTest;
 
     @BeforeEach
     public void setUp() {
-        nativeMock = mock(AssuanLibNative.class);
+        bridgeMock = mock(ScDaemonNativeBridge.class);
         socketDiscoveryMock = mock(JScdEnvSocketDiscovery.class);
         invocations = new AssuanMethodInvocations();
         testMemorySession = MemorySession.openConfined();
@@ -63,8 +65,9 @@ public class AssuanLibHandleTest {
 
         underTest = constructUnderTest();
 
-        verify(nativeMock).assuanNew(any(MemoryAddress.class));
-        verify(nativeMock).assuanSocketConnect(eq(invocations.ctx), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
+        verify(bridgeMock).assuanNew(any(MemoryAddress.class));
+        verify(bridgeMock).assuanSocketConnect(eq(invocations.ctx), any(MemoryAddress.class),
+            eq(ASSUAN_INVALID_PID),
             eq(ASSUAN_SOCKET_CONNECT_FDPASSING));
     }
 
@@ -77,12 +80,12 @@ public class AssuanLibHandleTest {
 
     @Test
     public void constructorDoesNotAcceptNullAsNativeBridge() {
-        assertNullArgNotAccepted(() -> new AssuanLibHandle(null, socketDiscoveryMock), "nativeBridge");
+        assertNullArgNotAccepted(() -> new ScDaemonHandle(null, socketDiscoveryMock), "bridge");
     }
 
     @Test
     public void constructorDoesNotAcceptNullAsSocketDiscovery() {
-        assertNullArgNotAccepted(() -> new AssuanLibHandle(nativeMock, null), "socketDiscovery");
+        assertNullArgNotAccepted(() -> new ScDaemonHandle(bridgeMock, null), "socketDiscovery");
     }
 
     @Test
@@ -90,7 +93,7 @@ public class AssuanLibHandleTest {
         try (var l = constructUnderTest()) {
 
         } finally {
-            verify(nativeMock).assuanRelease(eq(invocations.ctx));
+            verify(bridgeMock).assuanRelease(eq(invocations.ctx));
         }
     }
 
@@ -130,7 +133,7 @@ public class AssuanLibHandleTest {
 
         underTest.sendCommand(expectedCommand, line -> System.out.println(line), line -> System.out.println(line));
 
-        verify(nativeMock).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class),
+        verify(bridgeMock).assuanTransact(eq(invocations.ctx), any(MemoryAddress.class), any(MemoryAddress.class),
             eq(MemoryAddress.NULL),
             any(MemoryAddress.class), eq(MemoryAddress.NULL), any(MemoryAddress.class), eq(MemoryAddress.NULL));
         assertThat(invocations.command).as("Unexpected command").isEqualTo(expectedCommand);
@@ -168,7 +171,7 @@ public class AssuanLibHandleTest {
             underTest.close();
         });
 
-        verify(nativeMock).assuanRelease(any(MemoryAddress.class));
+        verify(bridgeMock).assuanRelease(any(MemoryAddress.class));
     }
 
     private static final class AssuanMethodInvocations {
@@ -181,7 +184,7 @@ public class AssuanLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.assuanNew(any(MemoryAddress.class))).thenAnswer(invocation -> {
+        when(bridgeMock.assuanNew(any(MemoryAddress.class))).thenAnswer(invocation -> {
             var ctxPtrSegPtr = invocation.getArgument(0, MemoryAddress.class);
             var ctxSeg = segment().of("Assuan ctx lives here").allocate(testMemorySession);
             ctxPtrSegPtr.set(ADDRESS, 0, ctxSeg.address());
@@ -195,7 +198,7 @@ public class AssuanLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.assuanSocketConnect(any(MemoryAddress.class), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
+        when(bridgeMock.assuanSocketConnect(any(MemoryAddress.class), any(MemoryAddress.class), eq(ASSUAN_INVALID_PID),
             eq(ASSUAN_SOCKET_CONNECT_FDPASSING)))
                 .thenAnswer(answer);
     }
@@ -205,7 +208,7 @@ public class AssuanLibHandleTest {
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
-        when(nativeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
+        when(bridgeMock.assuanTransact(any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class),
             any(MemoryAddress.class),
             any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class), any(MemoryAddress.class)))
                 .thenAnswer(invocation -> {
@@ -220,13 +223,13 @@ public class AssuanLibHandleTest {
         var stubber = Mockito.doAnswer(answer);
         try {
             var whenMethod = Stubber.class.getMethod("when", Object.class);
-            ((AssuanLibNative) whenMethod.invoke(stubber, nativeMock)).assuanRelease(any(MemoryAddress.class));
+            ((ScDaemonNativeBridge) whenMethod.invoke(stubber, bridgeMock)).assuanRelease(any(MemoryAddress.class));
         } catch (Exception e) {
             Assertions.fail("Could not mock call.", e);
         }
     }
 
-    private AssuanLibHandle constructUnderTest() {
-        return new AssuanLibHandle(nativeMock, socketDiscoveryMock);
+    private ScDaemonHandle constructUnderTest() {
+        return new ScDaemonHandle(bridgeMock, socketDiscoveryMock);
     }
 }

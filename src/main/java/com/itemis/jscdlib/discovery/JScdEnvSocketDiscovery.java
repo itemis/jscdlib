@@ -1,4 +1,4 @@
-package com.itemis.jscdlib;
+package com.itemis.jscdlib.discovery;
 
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 
