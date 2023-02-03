@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
         <version>5.7.0</version>
     </parent>
-
     <artifactId>jscdlib</artifactId>
     <version>0.8.0-SNAPSHOT</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
-
     <packaging>jar</packaging>
-
     <licenses>
         <license>
             <name>Eclipse Public License - v 2.0</name>
@@ -24,7 +19,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
     <developers>
         <developer>
             <id>JanMosigItemis</id>
@@ -36,16 +30,13 @@
             <url>https://github.com/JanMosigItemis</url>
         </developer>
     </developers>
-
     <url>https://github.com/itemis/jscdlib</url>
-
     <scm>
         <connection>scm:git:https://github.com/itemis/jscdlib</connection>
         <developerConnection>scm:git:https://github.com/itemis/jscdlib</developerConnection>
         <tag>HEAD</tag>
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
-
     <properties>
         <java.version>19</java.version>
         <maven.compiler.release>19</maven.compiler.release>
@@ -82,7 +73,6 @@
             --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
-
     <dependencyManagement>
         <dependencies>
             <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
@@ -160,7 +150,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -174,7 +163,6 @@
             <groupId>com.itemis</groupId>
             <artifactId>fluffyj.memory</artifactId>
         </dependency>
-            
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -228,7 +216,6 @@
         </dependency>
         <!-- End of test dependencies -->
     </dependencies>
-
     <build>
         <resources>
             <resource>
@@ -236,7 +223,6 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
-
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -316,7 +302,6 @@
                 </plugin>
             </plugins>
         </pluginManagement>
-
         <plugins>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
@@ -390,6 +375,28 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles></profiles>
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <additionalJOption>--enable-preview</additionalJOption>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
