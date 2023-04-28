@@ -5,10 +5,13 @@ import static java.lang.foreign.ValueLayout.JAVA_INT;
 
 import com.itemis.fluffyj.memory.FluffyNativeMethodHandle;
 
-import java.lang.foreign.MemoryAddress;
-import java.lang.foreign.MemorySession;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentScope;
 import java.lang.foreign.SymbolLookup;
 import java.util.function.Function;
+
+import jdk.jfr.MemoryAddress;
 
 public final class ScDaemonNativeBridge extends NativeBase implements AutoCloseable {
 
@@ -17,18 +20,17 @@ public final class ScDaemonNativeBridge extends NativeBase implements AutoClosea
     private final FluffyNativeMethodHandle<Long> assuanSocketConnect;
     private final FluffyNativeMethodHandle<Long> assuanTransact;
 
-    private final MemorySession mySession;
+    private final Arena myArena;
 
     /**
      * Create a new instance.
      *
      * @param libSup - Creates a "Connection" to the underlying native library in form of a
-     *        {@link SymbolLookup}. The connection will be closed if the provided
-     *        {@link MemorySession} is closed.
+     *        {@link SymbolLookup}. The connection will be closed if {@link #close()} is called.
      */
-    public ScDaemonNativeBridge(Function<MemorySession, SymbolLookup> libSup) {
-        mySession = MemorySession.openConfined();
-        var lib = libSup.apply(mySession);
+    public ScDaemonNativeBridge(Function<SegmentScope, SymbolLookup> libSup) {
+        myArena = Arena.openConfined();
+        var lib = libSup.apply(myArena.scope());
 
         assuanNew = FluffyNativeMethodHandle
             .fromCLib(lib)
@@ -62,7 +64,7 @@ public final class ScDaemonNativeBridge extends NativeBase implements AutoClosea
      *        successful return.
      * @return gpg_error_t - 0 for success, error code else.
      */
-    public long assuanNew(MemoryAddress p_ctx) {
+    public long assuanNew(MemorySegment p_ctx) {
         return callNativeFunction(() -> assuanNew.call(p_ctx));
     }
 
@@ -71,7 +73,7 @@ public final class ScDaemonNativeBridge extends NativeBase implements AutoClosea
      *
      * @param ctx Pointer to ctx created with {@link #assuanNew(MemoryAddress)}.
      */
-    public void assuanRelease(MemoryAddress ctx) {
+    public void assuanRelease(MemorySegment ctx) {
         callNativeVoidFunction(() -> assuanRelease.call(ctx));
     }
 
@@ -84,7 +86,7 @@ public final class ScDaemonNativeBridge extends NativeBase implements AutoClosea
      * @param flags Undocumented. Use ASSUAN_SOCKET_CONNECT_FDPASSING (1)
      * @return gpg_error_t - 0 for success, error code else.
      */
-    public long assuanSocketConnect(MemoryAddress ctx, MemoryAddress name, int server_pid, int flags) {
+    public long assuanSocketConnect(MemorySegment ctx, MemorySegment name, int server_pid, int flags) {
         return callNativeFunction(() -> assuanSocketConnect.call(ctx, name, server_pid, flags));
     }
 
@@ -121,19 +123,19 @@ public final class ScDaemonNativeBridge extends NativeBase implements AutoClosea
      *        {@link MemoryAddress#NULL}.
      * @return gpg_error_t
      */
-    public long assuanTransact(MemoryAddress ctx, MemoryAddress command, MemoryAddress data_cb,
-            MemoryAddress data_cb_arg, MemoryAddress inquire_cb,
-            MemoryAddress inquire_cb_arg, MemoryAddress status_cb, MemoryAddress status_cb_arg) {
+    public long assuanTransact(MemorySegment ctx, MemorySegment command, MemorySegment data_cb,
+            MemorySegment data_cb_arg, MemorySegment inquire_cb,
+            MemorySegment inquire_cb_arg, MemorySegment status_cb, MemorySegment status_cb_arg) {
         return callNativeFunction(() -> assuanTransact.call(ctx, command, data_cb, data_cb_arg, inquire_cb,
             inquire_cb_arg, status_cb, status_cb_arg));
     }
 
     @Override
     public void close() {
-        if (mySession.isAlive()) {
+        if (myArena.scope().isAlive()) {
             synchronized (this) {
-                if (mySession.isAlive()) {
-                    mySession.close();
+                if (myArena.scope().isAlive()) {
+                    myArena.close();
                 }
             }
         }

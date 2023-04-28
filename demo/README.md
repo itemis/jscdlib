@@ -14,4 +14,4 @@ java --enable-preview --enable-native-access=ALL-UNNAMED -jar target/jscdlib.dem
 ```
 
 # Usage
-When running the demo, it displays a command prompt that accepts commands known to scdaemon. Run ```gpg-connect-agent /r SCD HELP /bye``` for a list of available commands. Type "exit" to quit the command prompt.
+When running the demo, it displays a command prompt that accepts commands known to scdaemon. Run ```gpg-connect-agent /r "SCD HELP" /bye``` for a list of available commands. Type "exit" to quit the command prompt.

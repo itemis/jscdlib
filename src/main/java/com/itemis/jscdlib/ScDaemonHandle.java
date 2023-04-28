@@ -3,7 +3,7 @@ package com.itemis.jscdlib;
 import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
-import static java.lang.foreign.MemoryAddress.NULL;
+import static java.lang.foreign.MemorySegment.NULL;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
@@ -17,8 +17,10 @@ import com.itemis.jscdlib.problem.JScdProblems;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.foreign.MemoryAddress;
-import java.lang.foreign.MemorySession;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentAllocator;
+import java.lang.foreign.SegmentScope;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -45,9 +47,9 @@ public final class ScDaemonHandle implements AutoCloseable {
     private static final Set<JScdProblem> NON_FATAL_PROBLEMS = ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS);
 
     private final FluffyPointer ctxPtr;
-    private final MemoryAddress ctxAddr;
+    private final MemorySegment ctxAddr;
     private final ScDaemonNativeBridge bridge;
-    private final MemorySession mySession;
+    private final Arena myArena;
 
     /**
      * Create a new instance and initialize resources. Be aware that after construction, this object
@@ -63,12 +65,12 @@ public final class ScDaemonHandle implements AutoCloseable {
         requireNonNull(socketDiscovery, "socketDiscovery");
 
         try {
-            mySession = MemorySession.openConfined();
-            ctxPtr = pointer().allocate(mySession);
+            myArena = Arena.openConfined();
+            ctxPtr = pointer().allocate(myArena.scope());
             throwIfNoSuccess(bridge.assuanNew(ctxPtr.address()));
             ctxAddr = ctxPtr.getValue();
             var socketName =
-                segment().of(socketDiscovery.discover().toString()).allocate(mySession).address();
+                segment().of(socketDiscovery.discover().toString()).allocate(myArena.scope()).address();
             throwIfNoSuccess(bridge.assuanSocketConnect(ctxAddr, socketName,
                 ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
         } catch (Throwable t) {
@@ -97,11 +99,13 @@ public final class ScDaemonHandle implements AutoCloseable {
     public void sendCommand(String command, Consumer<String> responseConsumer, Consumer<String> statusConsumer) {
         var callback = new TransactCallback(responseConsumer, statusConsumer);
 
-        try (var transactSession = MemorySession.openConfined()) {
-            var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactSession).address();
-            var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactSession).address();
-            var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactSession).address();
-            var cmdAddr = segment().of(command).allocate(transactSession).address();
+        try (var transactArena = Arena.openConfined()) {
+
+            SegmentScope transactScope = transactArena.scope();
+            var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactScope);
+            var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactScope);
+            var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactScope);
+            var cmdAddr = SegmentAllocator.nativeAllocator(transactScope).allocateUtf8String(command);
             throwIfNoSuccess(
                 bridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
                     statusCbPtr, NULL));
@@ -115,9 +119,9 @@ public final class ScDaemonHandle implements AutoCloseable {
     @Override
     public void close() {
         if (ctxAddr != null) {
-            if (mySession.isAlive()) {
+            if (myArena.scope().isAlive()) {
                 synchronized (this) {
-                    if (mySession.isAlive()) {
+                    if (myArena.scope().isAlive()) {
                         try {
                             bridge.assuanRelease(ctxAddr);
                         } catch (Throwable t) {
@@ -128,7 +132,7 @@ public final class ScDaemonHandle implements AutoCloseable {
                             try {
                                 bridge.close();
                             } finally {
-                                mySession.close();
+                                myArena.close();
                             }
                         }
                     }
@@ -157,16 +161,16 @@ public final class ScDaemonHandle implements AutoCloseable {
             this.statusConsumer = statusConsumer;
         }
 
-        public int data_cb(MemoryAddress allLines, MemoryAddress currentLine, long lineLength) {
+        public int data_cb(MemorySegment allLines, MemorySegment currentLine, long lineLength) {
             responseConsumer.accept(currentLine.getUtf8String(0));
             return SUCCESS;
         }
 
-        public int inquire_cb(MemoryAddress allLines, MemoryAddress currentLine) {
+        public int inquire_cb(MemorySegment allLines, MemorySegment currentLine) {
             return SUCCESS;
         }
 
-        public int status_cb(MemoryAddress allLines, MemoryAddress currentLine) {
+        public int status_cb(MemorySegment allLines, MemorySegment currentLine) {
             statusConsumer.accept(currentLine.getUtf8String(0));
             return SUCCESS;
         }

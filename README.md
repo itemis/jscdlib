@@ -2,7 +2,7 @@
 A library that may be used to work with [scdaemon](https://www.gnupg.org/documentation/manuals/gnupg/Invoking-SCDAEMON.html#Invoking-SCDAEMON) and [SmartCards](https://en.wikipedia.org/wiki/Smart_card). This may be useful for client software that deals with security keys based on OpenPGP Smart Card standards.
 
 # Build
-Building with Maven >= 3.8.4 is recommended. Java 19 is required in order for the build to finish successful.   
+Building with Maven >= 3.9.x is recommended. Java 20 is required in order for the build to finish successful.   
   
 `mvn clean install`
 

@@ -11,7 +11,7 @@ import com.itemis.jscdlib.internal.ScardLibNativeBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.foreign.MemorySession;
+import java.lang.foreign.SegmentScope;
 import java.lang.foreign.SymbolLookup;
 import java.util.Set;
 
@@ -63,14 +63,14 @@ public final class JScdLib {
         ScardLibNativeBridge bridge = null;
 
         if (IS_WINDOWS) {
-            bridge = new ScardLibNativeBridge(session -> libraryLookup("winscard", session));
+            bridge = new ScardLibNativeBridge(scope -> libraryLookup("winscard", scope));
         } else if (IS_MAC) {
             // See
             // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L208
             bridge = new ScardLibNativeBridge(
                 session -> libraryLookup("/System/Library/Frameworks/PCSC.framework/PCSC", session));
         } else {
-            bridge = new ScardLibNativeBridge(session -> loadLinuxLib(LINUX_SCARD_LIB_CANDIDATES, session));
+            bridge = new ScardLibNativeBridge(scope -> loadLinuxLib(LINUX_SCARD_LIB_CANDIDATES, scope));
         }
 
         return new SCardLibHandle(bridge);
@@ -92,24 +92,24 @@ public final class JScdLib {
         ScDaemonNativeBridge bridge = null;
 
         if (IS_WINDOWS) {
-            bridge = new ScDaemonNativeBridge(session -> libraryLookup("libassuan6-0", session));
+            bridge = new ScDaemonNativeBridge(scope -> libraryLookup("libassuan6-0", scope));
         } else if (IS_MAC) {
-            bridge = new ScDaemonNativeBridge(session -> libraryLookup("libassuan", session));
+            bridge = new ScDaemonNativeBridge(scope -> libraryLookup("libassuan", scope));
         } else {
-            bridge = new ScDaemonNativeBridge(session -> loadLinuxLib(LINUX_SCDAEMON_LIB_CANDIDATES, session));
+            bridge = new ScDaemonNativeBridge(scope -> loadLinuxLib(LINUX_SCDAEMON_LIB_CANDIDATES, scope));
         }
 
         return new ScDaemonHandle(bridge, new JScdGpgConfSocketDiscovery(new JScdEnvSocketDiscovery()));
     }
 
-    private static SymbolLookup loadLinuxLib(Iterable<String> libNameCandidates, MemorySession session) {
+    private static SymbolLookup loadLinuxLib(Iterable<String> libNameCandidates, SegmentScope scope) {
         SymbolLookup result = null;
 
         var candidateIter = libNameCandidates.iterator();
         while (candidateIter.hasNext()) {
             var candidate = candidateIter.next();
             try {
-                result = libraryLookup(candidate, session);
+                result = libraryLookup(candidate, scope);
             } catch (IllegalArgumentException e) {
                 var msg = "Could not get a handle on lib.";
                 if (candidateIter.hasNext()) {

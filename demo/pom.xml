@@ -50,8 +50,8 @@
     </scm>
 
     <properties>
-        <java.version>19</java.version>
-        <maven.compiler.release>19</maven.compiler.release>
+        <java.version>20</java.version>
+        <maven.compiler.release>20</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
