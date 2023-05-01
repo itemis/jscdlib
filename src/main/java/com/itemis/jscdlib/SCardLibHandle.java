@@ -7,7 +7,6 @@ import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILAB
 import static java.lang.foreign.MemorySegment.NULL;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableSet;
 import com.itemis.jscdlib.internal.ScardLibNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
@@ -57,7 +56,7 @@ public final class SCardLibHandle implements AutoCloseable {
     static final long PCSC_SCOPE_USER = 0;
 
     private static final Set<JScdProblem> NON_FATAL_PROBLEMS =
-        ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
+        Set.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
 
     private final ScardLibNativeBridge bridge;
     private final Arena myArena;
@@ -139,8 +138,8 @@ public final class SCardLibHandle implements AutoCloseable {
     private void logIfNoSuccess(long errorCode, String errMsg) {
         if (errorCode != JScdProblems.SCARD_S_SUCCESS.errorCode()) {
             var problem = JScdProblems.fromError(errorCode);
-
-            LOG.warn(errMsg + " Reason: " + problem + ": " + problem.description());
+            var logMsg = (errMsg + " Reason: %s: %s").formatted(problem, problem.description());
+            LOG.warn(logMsg);
         }
     }
 
@@ -158,14 +157,8 @@ public final class SCardLibHandle implements AutoCloseable {
         if (!myArena.scope().isAlive()) {
             synchronized (this) {
                 if (!myArena.scope().isAlive()) {
-                    try {
-                        safeClose(myArena);
-                    } catch (Throwable t) {
-                        LOG.warn(
-                            "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
-                    } finally {
-                        bridge.close();
-                    }
+                    safeClose(myArena);
+                    bridge.close();
                 }
             }
         }

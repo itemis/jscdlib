@@ -48,7 +48,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-public class SCardLibHandleTest {
+class SCardLibHandleTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(SCardLibHandleTest.class);
 
@@ -65,7 +65,7 @@ public class SCardLibHandleTest {
     private SCardLibHandle underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         bridgeMock = mock(ScardLibNativeBridge.class);
         invocations = new SCardMethodInvocations();
         myArena = Arena.openConfined();
@@ -76,7 +76,7 @@ public class SCardLibHandleTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         if (underTest != null) {
             try {
                 underTest.close();
@@ -95,48 +95,48 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void test_handle_is_final() {
+    void test_handle_is_final() {
         FluffyTestHelper.assertFinal(SCardLibHandle.class);
     }
 
     @Test
-    public void test_handle_is_autoclosable() {
+    void test_handle_is_autoclosable() {
         assertThat(AutoCloseable.class).as("JScd handles must be autoclossable").isAssignableFrom(SCardLibHandle.class);
     }
 
     @Test
-    public void test_listReaders_returns_list() {
+    void test_listReaders_returns_list() {
         setupAvailableReaders(READER_ONE);
         assertThat(underTest.listReaders()).as("Method must return a list").isInstanceOf(List.class);
     }
 
     @Test
-    public void test_listReaders_returns_immutable_list() {
+    void test_listReaders_returns_immutable_list() {
         setupAvailableReaders(READER_ONE);
         assertThatThrownBy(() -> underTest.listReaders().add("testString")).as("list of readers must be immutable")
             .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    public void when_one_reader_is_available_return_its_name_as_list() {
+    void when_one_reader_is_available_return_its_name_as_list() {
         setupAvailableReaders(READER_ONE);
         assertThat(underTest.listReaders()).containsExactly(READER_ONE);
     }
 
     @Test
-    public void when_multiple_readers_are_available_return_their_names_as_list() {
+    void when_multiple_readers_are_available_return_their_names_as_list() {
         setupAvailableReaders(READER_ONE, READER_TWO);
         assertThat(underTest.listReaders()).containsExactly(READER_ONE, READER_TWO);
     }
 
     @Test
-    public void when_no_readers_are_available_return_empty_list() {
+    void when_no_readers_are_available_return_empty_list() {
         setupAvailableReaders(SCARD_E_NO_READERS_AVAILABLE);
         assertThat(underTest.listReaders()).isEmpty();
     }
 
     @Test
-    public void when_no_readers_are_available_cleanup_correctly() {
+    void when_no_readers_are_available_cleanup_correctly() {
         setupAvailableReaders(SCARD_E_NO_READERS_AVAILABLE);
         underTest.listReaders();
         assertThat(invocations.readerListPtr)
@@ -146,7 +146,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void when_establish_ctx_fails_skip_cleanup() {
+    void when_establish_ctx_fails_skip_cleanup() {
         establishContextReturns(SCARD_E_NO_MEMORY);
         assertThatThrownBy(() -> underTest.listReaders()).isInstanceOf(JScdException.class);
         verify(bridgeMock, never()).sCardFreeMemory(nullable(MemorySegment.class), nullable(MemorySegment.class));
@@ -154,7 +154,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void when_establish_listReaders_fails_skip_freeMem() {
+    void when_establish_listReaders_fails_skip_freeMem() {
         setupAvailableReaders(SCARD_E_NO_MEMORY);
         assertThatThrownBy(() -> underTest.listReaders()).isInstanceOf(JScdException.class);
         verify(bridgeMock, never()).sCardFreeMemory(nullable(MemorySegment.class), nullable(MemorySegment.class));
@@ -162,11 +162,11 @@ public class SCardLibHandleTest {
     }
 
     /**
-     * We cannot test against a real winscard.dll. Thus, we must make sure, the calls are correct
-     * and in expected order.
+     * We cannot test against a real winscard.dll. Thus, we must make sure, the correct calls are
+     * made in expected order.
      */
     @Test
-    public void list_readers_happy_path_runs_expected_calls() {
+    void list_readers_happy_path_runs_expected_calls() {
         setupAvailableReaders(READER_ONE);
 
         assertThatNoException().isThrownBy(() -> underTest.listReaders());
@@ -182,7 +182,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void list_readers_throws_jscdException_if_establish_context_fails() {
+    void list_readers_throws_jscdException_if_establish_context_fails() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         establishContextReturns(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders())
@@ -192,7 +192,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void list_readers_throws_jscdException_if_scardListReaders_fails() {
+    void list_readers_throws_jscdException_if_scardListReaders_fails() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         setupAvailableReaders(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders())
@@ -202,7 +202,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void list_readers_throws_jscdException_if_an_unknown_error_code_is_encountered() {
+    void list_readers_throws_jscdException_if_an_unknown_error_code_is_encountered() {
         var errorWithUnknownErrorCode = new JScdProblem() {
 
             @Override
@@ -228,7 +228,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void errors_during_free_mem_are_logged_no_exception_is_thrown() {
+    void errors_during_free_mem_are_logged_no_exception_is_thrown() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         freeMemReturns(expectedProblem);
 
@@ -240,7 +240,7 @@ public class SCardLibHandleTest {
     }
 
     @Test
-    public void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
+    void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
         var expectedProblem = SCARD_E_NO_MEMORY;
         releaseCtxReturns(expectedProblem);
 
@@ -288,7 +288,10 @@ public class SCardLibHandleTest {
             any(MemorySegment.class)))
                 .thenAnswer(invocation -> {
                     var ctx = segment().of("sCardCtx lives here").allocate(myArena.scope());
-                    invocation.getArgument(3, MemorySegment.class).set(ValueLayout.ADDRESS, 0, ctx.address());
+                    var ctxPtr = invocation.getArgument(3, MemorySegment.class);
+                    var ctxPtrSeg =
+                        MemorySegment.ofAddress(ctxPtr.address(), ValueLayout.ADDRESS.asUnbounded().byteSize());
+                    ctxPtrSeg.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctx.address());
                     invocations.hContext = ctx.address();
                     return SCARD_S_SUCCESS.errorCode();
                 });
@@ -317,13 +320,16 @@ public class SCardLibHandleTest {
                 var readerListMultiString = readerListMultiStringBuilder.toString();
                 var readerList = new StringSegment(readerListMultiString, myArena.scope());
 
-                addrOfReaderListPtr.set(ValueLayout.ADDRESS, 0, readerList.address());
-
+                var addrOfReaderList = MemorySegment.ofAddress(addrOfReaderListPtr.address(),
+                    ValueLayout.ADDRESS.asUnbounded().byteSize());
+                addrOfReaderList.set(ValueLayout.ADDRESS.asUnbounded(), 0, readerList.address());
                 var r = FluffyMemory.pointer().to(addrOfReaderListLength.address()).as(Integer.class)
                     .allocate(myArena.scope());
                 assertThat(r.dereference()).as("Provided reader list length must be unset.")
                     .isEqualTo(SCARD_AUTOALLOCATE);
-                addrOfReaderListLength.set(ValueLayout.JAVA_INT, 0,
+                var readerListLengthSeg = MemorySegment.ofAddress(addrOfReaderListLength.address(),
+                    ValueLayout.ADDRESS.asUnbounded().byteSize());
+                readerListLengthSeg.set(ValueLayout.JAVA_INT, 0,
                     readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
 
                 invocations.readerListPtr = readerList.address();

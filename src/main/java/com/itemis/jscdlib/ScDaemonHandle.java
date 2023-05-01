@@ -6,7 +6,6 @@ import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static java.lang.foreign.MemorySegment.NULL;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableSet;
 import com.itemis.fluffyj.memory.api.FluffyPointer;
 import com.itemis.jscdlib.discovery.JScdSocketDiscovery;
 import com.itemis.jscdlib.internal.ScDaemonNativeBridge;
@@ -20,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SegmentAllocator;
-import java.lang.foreign.SegmentScope;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -44,7 +42,7 @@ public final class ScDaemonHandle implements AutoCloseable {
      */
     static final int ASSUAN_SOCKET_CONNECT_FDPASSING = 1;
 
-    private static final Set<JScdProblem> NON_FATAL_PROBLEMS = ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS);
+    private static final Set<JScdProblem> NON_FATAL_PROBLEMS = Set.of(JScdProblems.SCARD_S_SUCCESS);
 
     private final FluffyPointer ctxPtr;
     private final MemorySegment ctxAddr;
@@ -100,8 +98,7 @@ public final class ScDaemonHandle implements AutoCloseable {
         var callback = new TransactCallback(responseConsumer, statusConsumer);
 
         try (var transactArena = Arena.openConfined()) {
-
-            SegmentScope transactScope = transactArena.scope();
+            var transactScope = transactArena.scope();
             var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactScope);
             var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactScope);
             var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactScope);
@@ -118,26 +115,25 @@ public final class ScDaemonHandle implements AutoCloseable {
      */
     @Override
     public void close() {
-        if (ctxAddr != null) {
-            if (myArena.scope().isAlive()) {
-                synchronized (this) {
-                    if (myArena.scope().isAlive()) {
+        if (ctxAddr != null && (myArena.scope().isAlive())) {
+            synchronized (this) {
+                if (myArena.scope().isAlive()) {
+                    try {
+                        bridge.assuanRelease(ctxAddr);
+                    } catch (Throwable t) {
+                        LOG.warn(
+                            "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
+                                + pretty(t));
+                    } finally {
                         try {
-                            bridge.assuanRelease(ctxAddr);
-                        } catch (Throwable t) {
-                            LOG.warn(
-                                "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
-                                    + pretty(t));
+                            bridge.close();
                         } finally {
-                            try {
-                                bridge.close();
-                            } finally {
-                                myArena.close();
-                            }
+                            myArena.close();
                         }
                     }
                 }
             }
+
         }
     }
 
@@ -151,7 +147,7 @@ public final class ScDaemonHandle implements AutoCloseable {
     }
 
     protected static final class TransactCallback {
-        private final int SUCCESS = (int) JScdProblems.SCARD_S_SUCCESS.errorCode();
+        private static final int SUCCESS = (int) JScdProblems.SCARD_S_SUCCESS.errorCode();
 
         private final Consumer<String> responseConsumer;
         private final Consumer<String> statusConsumer;

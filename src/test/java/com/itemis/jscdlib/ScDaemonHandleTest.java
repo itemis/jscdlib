@@ -36,7 +36,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.file.Paths;
 
-public class ScDaemonHandleTest {
+class ScDaemonHandleTest {
 
     private static final Answer<Long> SUCCESS = invocation -> JScdProblems.SCARD_S_SUCCESS.errorCode();
 
@@ -51,7 +51,7 @@ public class ScDaemonHandleTest {
     private ScDaemonHandle underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         bridgeMock = mock(ScDaemonNativeBridge.class);
         socketDiscoveryMock = mock(JScdEnvSocketDiscovery.class);
         invocations = new AssuanMethodInvocations();
@@ -72,24 +72,24 @@ public class ScDaemonHandleTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         if (underTest != null) {
             underTest.close();
         }
     }
 
     @Test
-    public void constructorDoesNotAcceptNullAsNativeBridge() {
+    void constructorDoesNotAcceptNullAsNativeBridge() {
         assertNullArgNotAccepted(() -> new ScDaemonHandle(null, socketDiscoveryMock), "bridge");
     }
 
     @Test
-    public void constructorDoesNotAcceptNullAsSocketDiscovery() {
+    void constructorDoesNotAcceptNullAsSocketDiscovery() {
         assertNullArgNotAccepted(() -> new ScDaemonHandle(bridgeMock, null), "socketDiscovery");
     }
 
     @Test
-    public void close_calls_release_correctly() {
+    void close_calls_release_correctly() {
         try (var l = constructUnderTest()) {
 
         } finally {
@@ -98,7 +98,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void constructor_throws_jscdException_if_assuan_new_fails() {
+    void constructor_throws_jscdException_if_assuan_new_fails() {
         var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanNewReturns(invocation -> expectedProblem.errorCode());
@@ -113,7 +113,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void constructor_throws_jscdException_if_socket_connect_fails() {
+    void constructor_throws_jscdException_if_socket_connect_fails() {
         var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanSocketConnectReturns(invocation -> expectedProblem.errorCode());
@@ -128,7 +128,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void sendCommand_happyPath() {
+    void sendCommand_happyPath() {
         var expectedCommand = "SERIALNO";
 
         underTest.sendCommand(expectedCommand, line -> System.out.println(line), line -> System.out.println(line));
@@ -140,7 +140,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void send_command_throws_jscdException_if_transact_fails() {
+    void send_command_throws_jscdException_if_transact_fails() {
         var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanTransactReturns(invocation -> expectedProblem.errorCode());
@@ -152,7 +152,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
+    void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
         assuanReleaseReturns(invocation -> {
             throw EXPECTED_CHECKED_EXCEPTION;
         });
@@ -165,7 +165,7 @@ public class ScDaemonHandleTest {
     }
 
     @Test
-    public void calling_close_twice_does_not_call_release_twice() {
+    void calling_close_twice_does_not_call_release_twice() {
         assertDoesNotThrow(() -> {
             underTest.close();
             underTest.close();
@@ -187,7 +187,9 @@ public class ScDaemonHandleTest {
         when(bridgeMock.assuanNew(any(MemorySegment.class))).thenAnswer(invocation -> {
             var ctxPtrSegPtr = invocation.getArgument(0, MemorySegment.class);
             var ctxSeg = segment().of("Assuan ctx lives here").allocate(testArena.scope());
-            ctxPtrSegPtr.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctxSeg.address());
+            var ctxPtrSeg =
+                MemorySegment.ofAddress(ctxPtrSegPtr.address(), ValueLayout.ADDRESS.asUnbounded().byteSize());
+            ctxPtrSeg.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctxSeg.address());
             invocations.ctx = ctxSeg.address();
             return answer.answer(invocation);
         });

@@ -19,7 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class JScdSocketDiscoveryFallbackTest {
+class JScdSocketDiscoveryFallbackTest {
 
     private static final String JSCDLIB_SOCKET_FILE_PROP_KEY = "jscdlib.socket.file";
     private static final String GNUPGHOME_ENV_KEY = "GNUPGHOME";
@@ -36,13 +36,13 @@ public class JScdSocketDiscoveryFallbackTest {
     private JScdSocketDiscovery underTest;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         testSocketFilePath = Files.createFile(tempDir.resolve(SOCKET_FILE_NAME));
         underTest = new JScdEnvSocketDiscovery();
     }
 
     @Test
-    public void given_no_env_and_no_prop_then_jscdexception() {
+    void given_no_env_and_no_prop_then_jscdexception() {
         assertThatThrownBy(() -> withEnvironmentVariable(GNUPGHOME_ENV_KEY, null).execute(() -> underTest.discover()))
             .isInstanceOf(JScdException.class)
             .hasFieldOrPropertyWithValue("problem",
@@ -51,7 +51,7 @@ public class JScdSocketDiscoveryFallbackTest {
     }
 
     @Test
-    public void when_only_env_then_return_its_value_plus_filename() throws Exception {
+    void when_only_env_then_return_its_value_plus_filename() throws Exception {
         var envValue = tempDir.toString();
         var expectedResult = Paths.get(envValue, SOCKET_FILE_NAME);
         var actualResult = withEnvironmentVariable(GNUPGHOME_ENV_KEY, envValue).execute(() -> underTest.discover());
@@ -60,7 +60,7 @@ public class JScdSocketDiscoveryFallbackTest {
     }
 
     @Test
-    public void when_only_prop_then_return_its_value() {
+    void when_only_prop_then_return_its_value() {
         var propValue = testSocketFilePath.toString();
         var expectedResult = Paths.get(propValue);
         System.setProperty(JSCDLIB_SOCKET_FILE_PROP_KEY, propValue);
@@ -70,7 +70,7 @@ public class JScdSocketDiscoveryFallbackTest {
     }
 
     @Test
-    public void prop_overrides_env_if_both_exist() throws Exception {
+    void prop_overrides_env_if_both_exist() throws Exception {
         var propValue = testSocketFilePath.toString();
         var envValue = "envValue";
         var expectedResult = Paths.get(propValue);
@@ -82,7 +82,7 @@ public class JScdSocketDiscoveryFallbackTest {
     }
 
     @Test
-    public void when_file_does_not_exist_then_jscdexception() throws Exception {
+    void when_file_does_not_exist_then_jscdexception() throws Exception {
         Files.delete(testSocketFilePath);
 
         var propValue = testSocketFilePath.toString();

@@ -31,7 +31,7 @@ public class JscdTestMain {
 
             var addr = mszReaders.rawDereference();
             var rd1 = addr.getUtf8String(0);
-            var rd2 = addr.getUtf8String(rd1.length() + 1);
+            var rd2 = addr.getUtf8String(rd1.length() + 1L);
 
             System.err.println(rd1);
             System.err.println(rd2);

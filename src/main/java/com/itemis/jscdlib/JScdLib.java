@@ -2,6 +2,7 @@ package com.itemis.jscdlib;
 
 import static java.lang.foreign.SymbolLookup.libraryLookup;
 
+import com.itemis.fluffyj.exceptions.InstantiationNotPermittedException;
 import com.itemis.jscdlib.discovery.JScdEnvSocketDiscovery;
 import com.itemis.jscdlib.discovery.JScdGpgConfSocketDiscovery;
 import com.itemis.jscdlib.internal.OsDetector;
@@ -46,6 +47,10 @@ public final class JScdLib {
     // See
     // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
     private static final Set<String> LINUX_SCARD_LIB_CANDIDATES = Set.of("libpcsclite.so.1", "libpcsclite.so");
+
+    private JScdLib() {
+        throw new InstantiationNotPermittedException();
+    }
 
     /**
      * <p>
@@ -112,12 +117,11 @@ public final class JScdLib {
                 result = libraryLookup(candidate, scope);
             } catch (IllegalArgumentException e) {
                 var msg = "Could not get a handle on lib.";
-                if (candidateIter.hasNext()) {
-                    LOG.debug(msg, e);
-                } else {
+                if (!candidateIter.hasNext()) {
                     LOG.error(msg + " Giving up.", e);
                     throw e;
                 }
+                LOG.debug(msg, e);
             }
         }
 
