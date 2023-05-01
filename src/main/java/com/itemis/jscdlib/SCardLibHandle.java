@@ -4,11 +4,9 @@ import static com.itemis.fluffyj.exceptions.ThrowablePrettyfier.pretty;
 import static com.itemis.fluffyj.memory.FluffyMemory.pointer;
 import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static com.itemis.jscdlib.problem.JScdProblems.SCARD_E_NO_READERS_AVAILABLE;
-import static java.lang.foreign.MemoryAddress.NULL;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.lang.foreign.MemorySegment.NULL;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableSet;
 import com.itemis.jscdlib.internal.ScardLibNativeBridge;
 import com.itemis.jscdlib.problem.JScdException;
 import com.itemis.jscdlib.problem.JScdProblem;
@@ -17,8 +15,8 @@ import com.itemis.jscdlib.problem.JScdProblems;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.foreign.MemoryAddress;
-import java.lang.foreign.MemorySession;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +37,7 @@ public final class SCardLibHandle implements AutoCloseable {
     /**
      * According to the spec, this is a null pointer.
      */
-    static final MemoryAddress SCARD_ALL_READERS = MemoryAddress.NULL;
+    static final MemorySegment SCARD_ALL_READERS = NULL;
 
     /**
      * Use this value to signal that a lib should automatically allocate memory for lists or arrays.
@@ -58,15 +56,15 @@ public final class SCardLibHandle implements AutoCloseable {
     static final long PCSC_SCOPE_USER = 0;
 
     private static final Set<JScdProblem> NON_FATAL_PROBLEMS =
-        ImmutableSet.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
+        Set.of(JScdProblems.SCARD_S_SUCCESS, JScdProblems.SCARD_E_NO_READERS_AVAILABLE);
 
     private final ScardLibNativeBridge bridge;
-    private final MemorySession mySession;
+    private final Arena myArena;
 
     public SCardLibHandle(ScardLibNativeBridge bridge) {
         this.bridge = requireNonNull(bridge, "bridge");
 
-        mySession = MemorySession.openConfined();
+        myArena = Arena.openConfined();
     }
 
     /**
@@ -87,12 +85,13 @@ public final class SCardLibHandle implements AutoCloseable {
         var ctxEstablished = false;
         var listReadersReturned = false;
 
-        try (var listReadersSession = MemorySession.openConfined()) {
-            var ctxPtrSeg = pointer().allocate(listReadersSession);
-            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersSession);
-            MemoryAddress ptrToFirstEntryInReaderList = null;
+        try (var listReadersArena = Arena.openConfined()) {
+            var listReadersScope = listReadersArena.scope();
+            var ctxPtrSeg = pointer().allocate(listReadersScope);
+            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersScope);
+            MemorySegment ptrToFirstEntryInReaderList = null;
             try {
-                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersSession);
+                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
 
                 throwIfNoSuccess(
                     bridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
@@ -104,17 +103,13 @@ public final class SCardLibHandle implements AutoCloseable {
                 listReadersReturned = true;
                 ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
                 if (listReadersProblem != SCARD_E_NO_READERS_AVAILABLE) {
-                    final var TRAILING_NULL = 1;
-                    var remainingLength = readerListLength.getValue() - TRAILING_NULL;
-                    var localReaderListPtrSeg = readerListPtrSeg;
-                    while (remainingLength > 0) {
-                        var currentReader = localReaderListPtrSeg.dereference();
+                    var currentOffset = 0;
+                    var localReaderListPtrSeg = readerListPtrSeg.rawDereference();
+                    Integer maxOffset = readerListLength.getValue() - 1;
+                    while (currentOffset < maxOffset) {
+                        var currentReader = localReaderListPtrSeg.getUtf8String(currentOffset);
                         result.add(currentReader);
-                        var nextOffset = currentReader.getBytes(UTF_8).length + TRAILING_NULL;
-                        var addressOfNextEntry = readerListPtrSeg.getValue().addOffset(nextOffset);
-                        localReaderListPtrSeg =
-                            pointer().to(addressOfNextEntry).as(String.class).allocate(listReadersSession);
-                        remainingLength -= nextOffset;
+                        currentOffset += currentReader.length() + 1;
                     }
                 }
             } finally {
@@ -143,33 +138,27 @@ public final class SCardLibHandle implements AutoCloseable {
     private void logIfNoSuccess(long errorCode, String errMsg) {
         if (errorCode != JScdProblems.SCARD_S_SUCCESS.errorCode()) {
             var problem = JScdProblems.fromError(errorCode);
-
-            LOG.warn(errMsg + " Reason: " + problem + ": " + problem.description());
+            var logMsg = (errMsg + " Reason: %s: %s").formatted(problem, problem.description());
+            LOG.warn(logMsg);
         }
     }
 
-    private void safeClose(MemorySession session) {
+    private void safeClose(Arena arena) {
         try {
-            session.close();
+            arena.close();
         } catch (Throwable t) {
             LOG.warn(
-                "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
+                "Possible ressource leak: Could not close arena. Reason: " + pretty(t));
         }
     }
 
     @Override
     public void close() throws Exception {
-        if (!mySession.isAlive()) {
+        if (!myArena.scope().isAlive()) {
             synchronized (this) {
-                if (!mySession.isAlive()) {
-                    try {
-                        safeClose(mySession);
-                    } catch (Throwable t) {
-                        LOG.warn(
-                            "Possible ressource leak: Could not close memory session. Reason: " + pretty(t));
-                    } finally {
-                        bridge.close();
-                    }
+                if (!myArena.scope().isAlive()) {
+                    safeClose(myArena);
+                    bridge.close();
                 }
             }
         }
