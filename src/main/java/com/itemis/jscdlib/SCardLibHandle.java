@@ -87,27 +87,22 @@ public final class SCardLibHandle implements AutoCloseable {
 
         try (var listReadersArena = Arena.openConfined()) {
             var listReadersScope = listReadersArena.scope();
-            var ctxPtrSeg = pointer().allocate(listReadersScope);
-            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersScope);
-            MemorySegment ptrToFirstEntryInReaderList = null;
+            var ctxPtr = pointer().allocate(listReadersScope);
+            var readerListPtr = pointer().allocate(listReadersScope);
             try {
-                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
-
-                throwIfNoSuccess(
-                    bridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
+                throwIfNoSuccess(bridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtr.address()));
                 ctxEstablished = true;
-
+                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
                 var listReadersProblem = throwIfNoSuccess(
-                    bridge.sCardListReaders(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(),
+                    bridge.sCardListReaders(ctxPtr.getValue(), SCARD_ALL_READERS, readerListPtr.address(),
                         readerListLength.address()));
                 listReadersReturned = true;
-                ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
-                if (listReadersProblem != SCARD_E_NO_READERS_AVAILABLE) {
+                if (readersAreAvailable(listReadersProblem)) {
                     var currentOffset = 0;
-                    var localReaderListPtrSeg = readerListPtrSeg.rawDereference();
+                    var readerList = readerListPtr.rawDereference();
                     Integer maxOffset = readerListLength.getValue() - 1;
                     while (currentOffset < maxOffset) {
-                        var currentReader = localReaderListPtrSeg.getUtf8String(currentOffset);
+                        var currentReader = readerList.getUtf8String(currentOffset);
                         result.add(currentReader);
                         currentOffset += currentReader.length() + 1;
                     }
@@ -115,15 +110,20 @@ public final class SCardLibHandle implements AutoCloseable {
             } finally {
                 if (ctxEstablished) {
                     if (listReadersReturned) {
-                        logIfNoSuccess(bridge.sCardFreeMemory(ctxPtrSeg.getValue(), ptrToFirstEntryInReaderList),
+                        logIfNoSuccess(bridge.sCardFreeMemory(ctxPtr.getValue(), readerListPtr.getValue()),
                             "Possible ressource leak: Operation listReaders could not free memory.");
                     }
-                    logIfNoSuccess(bridge.sCardReleaseContext(ctxPtrSeg.getValue()),
+                    logIfNoSuccess(bridge.sCardReleaseContext(ctxPtr.getValue()),
                         "Possible ressource leak: Operation listReaders could not release scard context.");
                 }
             }
         }
         return Collections.unmodifiableList(result);
+    }
+
+    private boolean readersAreAvailable(JScdProblem listReadersProblem) {
+        return listReadersProblem == JScdProblems.SCARD_S_SUCCESS
+            && listReadersProblem != SCARD_E_NO_READERS_AVAILABLE;
     }
 
     private JScdProblem throwIfNoSuccess(long errorCode) {

@@ -288,9 +288,10 @@ class SCardLibHandleTest {
             any(MemorySegment.class)))
                 .thenAnswer(invocation -> {
                     var ctx = segment().of("sCardCtx lives here").allocate(myArena.scope());
-                    var ctxPtr = invocation.getArgument(3, MemorySegment.class);
+                    var ctxPtrZeroLength = invocation.getArgument(3, MemorySegment.class);
                     var ctxPtrSeg =
-                        MemorySegment.ofAddress(ctxPtr.address(), ValueLayout.ADDRESS.asUnbounded().byteSize());
+                        MemorySegment.ofAddress(ctxPtrZeroLength.address(),
+                            ValueLayout.ADDRESS.asUnbounded().byteSize());
                     ctxPtrSeg.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctx.address());
                     invocations.hContext = ctx.address();
                     return SCARD_S_SUCCESS.errorCode();
