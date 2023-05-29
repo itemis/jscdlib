@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
-        <version>5.7.0</version>
+        <version>5.8.1</version>
     </parent>
     <artifactId>jscdlib</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
+    <version>0.9.0</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -65,9 +65,9 @@
         <equalsverifier.version>3.10</equalsverifier.version>
         <awaitility.version>4.2.0</awaitility.version>
         <arch.unit.version>1.0.1</arch.unit.version>
-        <fluffyj.version>1.12.0</fluffyj.version>
-        <fluffyj-tests.version>1.7.0</fluffyj-tests.version>
-        <fluffyj-memory.version>1.6.0</fluffyj-memory.version>
+        <fluffyj.version>1.13.0</fluffyj.version>
+        <fluffyj-tests.version>1.7.1</fluffyj-tests.version>
+        <fluffyj-memory.version>1.7.0</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <custom.jvm.options>
             --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
@@ -345,8 +345,16 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- For warnings about illegal reflective access see https://issues.apache.org/jira/browse/GROOVY-8339 -->
             <plugin>
@@ -373,30 +381,17 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-help-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <additionalOptions>
+                        <option>--enable-preview</option>
+                    </additionalOptions>
+                    <doclint>-missing</doclint>
+                    <quiet>true</quiet>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>attach-javadocs</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                                <configuration>
-                                    <additionalJOption>--enable-preview</additionalJOption>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
