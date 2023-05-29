@@ -7,13 +7,13 @@ Building with Maven >= 3.9.x is recommended. Java 20 is required in order for th
 `mvn clean install`
 
 # Run
-This library requires Java 19.
+This library requires Java 20.
 
 # Demo
 See `demo/README.md`
 
 # Eclipse IDE Setup
-Due to the usage of Java 19 preview code, the following special setup is required:  
+Due to the usage of Java 20 preview code, the following special setup is required:  
   
 * Add the following JVM options to launch configurations of tests in order to be able to run JUnit tests from within the IDE:
 
