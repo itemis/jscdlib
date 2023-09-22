@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>jscdlib.demo</artifactId>
-    <version>1.8.1</version>
+    <version>1.9.0-SNAPSHOT</version>
 
     <name>jScdLib Demo</name>
     <description>Demonstration of jScdLib</description>
@@ -68,7 +68,7 @@
         <spotbugs.plugin.version>4.7.3.5</spotbugs.plugin.version>
         <git-commit-id-plugin.version>6.0.0</git-commit-id-plugin.version>
         <logback.version>1.4.11</logback.version>
-        <jscdlib.version>0.9.1</jscdlib.version>
+        <jscdlib.version>0.10.0-SNAPSHOT</jscdlib.version>
     </properties>
 
     <dependencyManagement>
