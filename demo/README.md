@@ -10,7 +10,7 @@ Building with Maven >= 3.8.4 is recommended. Java 20 is required in order for th
 This demo requires Java 20.  
 
 ```
-java --enable-preview --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.9.0-SNAPSHOT-shaded.jar
+java --enable-preview --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.9.2-shaded.jar
 ```
 
 # Usage
