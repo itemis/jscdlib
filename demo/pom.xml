@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>jscdlib.demo</artifactId>
-    <version>1.8.1</version>
+    <version>1.8.2</version>
 
     <name>jScdLib Demo</name>
     <description>Demonstration of jScdLib</description>
@@ -64,11 +64,11 @@
         <resource.delimiter>${*}</resource.delimiter>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-shade-plugin.version>3.5.0</maven-shade-plugin.version>
-        <spotbugs.plugin.version>4.7.3.5</spotbugs.plugin.version>
+        <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
+        <spotbugs.plugin.version>4.7.3.6</spotbugs.plugin.version>
         <git-commit-id-plugin.version>6.0.0</git-commit-id-plugin.version>
         <logback.version>1.4.11</logback.version>
-        <jscdlib.version>0.9.1</jscdlib.version>
+        <jscdlib.version>0.9.2</jscdlib.version>
     </properties>
 
     <dependencyManagement>

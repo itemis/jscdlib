@@ -7,7 +7,7 @@
         <version>5.8.2</version>
     </parent>
     <artifactId>jscdlib</artifactId>
-    <version>0.9.1</version>
+    <version>0.9.2</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -56,7 +56,7 @@
         <guava.version>31.1-jre</guava.version>
         <mockito.version>5.5.0</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <spotbugs.plugin.version>4.7.3.5</spotbugs.plugin.version>
+        <spotbugs.plugin.version>4.7.3.6</spotbugs.plugin.version>
         <junit.version>5.10.0</junit.version>
         <jacoco.plugin.version>0.8.10</jacoco.plugin.version>
         <git-commit-id-plugin.version>6.0.0</git-commit-id-plugin.version>
@@ -65,9 +65,9 @@
         <equalsverifier.version>3.10</equalsverifier.version>
         <awaitility.version>4.2.0</awaitility.version>
         <arch.unit.version>1.1.0</arch.unit.version>
-        <fluffyj.version>1.13.0</fluffyj.version>
-        <fluffyj-tests.version>1.7.1</fluffyj-tests.version>
-        <fluffyj-memory.version>1.7.1</fluffyj-memory.version>
+        <fluffyj.version>1.13.1</fluffyj.version>
+        <fluffyj-tests.version>1.7.2</fluffyj-tests.version>
+        <fluffyj-memory.version>1.7.2</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <custom.jvm.options>
             --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
