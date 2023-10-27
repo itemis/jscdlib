@@ -60,7 +60,7 @@ class SCardLibHandleTest {
 
     private SCardMethodInvocations invocations;
     private ScardLibNativeBridge bridgeMock;
-    private Arena myArena;
+    private Arena testArena;
 
     private SCardLibHandle underTest;
 
@@ -68,7 +68,7 @@ class SCardLibHandleTest {
     void setUp() {
         bridgeMock = mock(ScardLibNativeBridge.class);
         invocations = new SCardMethodInvocations();
-        myArena = Arena.openConfined();
+        testArena = Arena.ofShared();
 
         setupAllMethodsSuccess();
 
@@ -80,15 +80,15 @@ class SCardLibHandleTest {
         if (underTest != null) {
             try {
                 underTest.close();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 LOG.warn("Possible ressource leak. Could not close JScd test handle.", e);
             }
         }
 
-        if (myArena != null && myArena.scope().isAlive()) {
+        if (testArena != null && testArena.scope().isAlive()) {
             try {
-                myArena.close();
-            } catch (Exception e) {
+                testArena.close();
+            } catch (final Exception e) {
                 LOG.warn("Possible ressource leak. Could not close test memory session.", e);
             }
         }
@@ -171,7 +171,7 @@ class SCardLibHandleTest {
 
         assertThatNoException().isThrownBy(() -> underTest.listReaders());
 
-        var inOrder = inOrder(bridgeMock);
+        final var inOrder = inOrder(bridgeMock);
         inOrder.verify(bridgeMock).sCardEstablishContext(eq(PCSC_SCOPE_SYSTEM), same(NULL), same(NULL),
             any(MemorySegment.class));
         inOrder.verify(bridgeMock)
@@ -183,7 +183,7 @@ class SCardLibHandleTest {
 
     @Test
     void list_readers_throws_jscdException_if_establish_context_fails() {
-        var expectedProblem = SCARD_E_NO_MEMORY;
+        final var expectedProblem = SCARD_E_NO_MEMORY;
         establishContextReturns(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders())
             .as("Expected exception in case of an error in smart card native code.")
@@ -193,7 +193,7 @@ class SCardLibHandleTest {
 
     @Test
     void list_readers_throws_jscdException_if_scardListReaders_fails() {
-        var expectedProblem = SCARD_E_NO_MEMORY;
+        final var expectedProblem = SCARD_E_NO_MEMORY;
         setupAvailableReaders(expectedProblem);
         assertThatThrownBy(() -> underTest.listReaders())
             .as("Expected exception in case of an error in smart card native code.")
@@ -203,7 +203,7 @@ class SCardLibHandleTest {
 
     @Test
     void list_readers_throws_jscdException_if_an_unknown_error_code_is_encountered() {
-        var errorWithUnknownErrorCode = new JScdProblem() {
+        final var errorWithUnknownErrorCode = new JScdProblem() {
 
             @Override
             public String errorName() {
@@ -229,7 +229,7 @@ class SCardLibHandleTest {
 
     @Test
     void errors_during_free_mem_are_logged_no_exception_is_thrown() {
-        var expectedProblem = SCARD_E_NO_MEMORY;
+        final var expectedProblem = SCARD_E_NO_MEMORY;
         freeMemReturns(expectedProblem);
 
         assertDoesNotThrow(() -> underTest.listReaders());
@@ -241,7 +241,7 @@ class SCardLibHandleTest {
 
     @Test
     void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
-        var expectedProblem = SCARD_E_NO_MEMORY;
+        final var expectedProblem = SCARD_E_NO_MEMORY;
         releaseCtxReturns(expectedProblem);
 
         assertDoesNotThrow(() -> underTest.listReaders());
@@ -252,7 +252,7 @@ class SCardLibHandleTest {
                 + expectedProblem.description());
     }
 
-    private void establishContextReturns(JScdProblem expectedProblem) {
+    private void establishContextReturns(final JScdProblem expectedProblem) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
@@ -262,7 +262,7 @@ class SCardLibHandleTest {
                 .thenReturn(expectedProblem.errorCode());
     }
 
-    private void freeMemReturns(JScdProblem expectedProblem) {
+    private void freeMemReturns(final JScdProblem expectedProblem) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
@@ -271,7 +271,7 @@ class SCardLibHandleTest {
             .thenReturn(expectedProblem.errorCode());
     }
 
-    private void releaseCtxReturns(JScdProblem expectedProblem) {
+    private void releaseCtxReturns(final JScdProblem expectedProblem) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
@@ -287,11 +287,11 @@ class SCardLibHandleTest {
         when(bridgeMock.sCardEstablishContext(anyLong(), any(MemorySegment.class), any(MemorySegment.class),
             any(MemorySegment.class)))
                 .thenAnswer(invocation -> {
-                    var ctx = segment().of("sCardCtx lives here").allocate(myArena.scope());
-                    var ctxPtr = invocation.getArgument(3, MemorySegment.class);
-                    var ctxPtrSeg =
-                        MemorySegment.ofAddress(ctxPtr.address(), ValueLayout.ADDRESS.asUnbounded().byteSize());
-                    ctxPtrSeg.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctx.address());
+                    final var ctx = segment().of("sCardCtx lives here").allocate(testArena);
+                    final var ctxPtr = invocation.getArgument(3, MemorySegment.class);
+                    final var ctxPtrSeg =
+                        MemorySegment.ofAddress(ctxPtr.address()).reinterpret(ValueLayout.ADDRESS.byteSize());
+                    ctxPtrSeg.set(ValueLayout.ADDRESS, 0, ctx.address());
                     invocations.hContext = ctx.address();
                     return SCARD_S_SUCCESS.errorCode();
                 });
@@ -301,34 +301,34 @@ class SCardLibHandleTest {
         releaseCtxReturns(SCARD_S_SUCCESS);
     }
 
-    private void setupAvailableReaders(JScdProblem expectedProblem, String... readerNames) {
+    private void setupAvailableReaders(final JScdProblem expectedProblem, final String... readerNames) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
         when(bridgeMock.sCardListReaders(any(MemorySegment.class), any(MemorySegment.class), any(MemorySegment.class),
             any(MemorySegment.class))).then(invocation -> {
-                var addrOfReaderListPtr = invocation.getArgument(2, MemorySegment.class);
-                var addrOfReaderListLength = invocation.getArgument(3, MemorySegment.class);
+                final var addrOfReaderListPtr = invocation.getArgument(2, MemorySegment.class);
+                final var addrOfReaderListLength = invocation.getArgument(3, MemorySegment.class);
 
-                var readerListMultiStringBuilder = new StringBuilder("");
+                final var readerListMultiStringBuilder = new StringBuilder("");
                 Arrays.stream(readerNames).forEach(reader -> {
                     readerListMultiStringBuilder.append(reader);
                     readerListMultiStringBuilder.append('\0');
                 });
                 readerListMultiStringBuilder.append('\0');
-                var readerListMultiString = readerListMultiStringBuilder.toString();
-                var readerList = new StringSegment(readerListMultiString, myArena.scope());
+                final var readerListMultiString = readerListMultiStringBuilder.toString();
+                final var readerList = new StringSegment(readerListMultiString, testArena);
 
-                var addrOfReaderList = MemorySegment.ofAddress(addrOfReaderListPtr.address(),
-                    ValueLayout.ADDRESS.asUnbounded().byteSize());
-                addrOfReaderList.set(ValueLayout.ADDRESS.asUnbounded(), 0, readerList.address());
-                var r = FluffyMemory.pointer().to(addrOfReaderListLength.address()).as(Integer.class)
-                    .allocate(myArena.scope());
+                final var addrOfReaderList =
+                    MemorySegment.ofAddress(addrOfReaderListPtr.address()).reinterpret(ValueLayout.ADDRESS.byteSize());
+                addrOfReaderList.set(ValueLayout.ADDRESS, 0, readerList.address());
+                final var r = FluffyMemory.pointer().to(addrOfReaderListLength.address()).as(Integer.class)
+                    .allocate(testArena);
                 assertThat(r.dereference()).as("Provided reader list length must be unset.")
                     .isEqualTo(SCARD_AUTOALLOCATE);
-                var readerListLengthSeg = MemorySegment.ofAddress(addrOfReaderListLength.address(),
-                    ValueLayout.ADDRESS.asUnbounded().byteSize());
+                final var readerListLengthSeg = MemorySegment.ofAddress(addrOfReaderListLength.address())
+                    .reinterpret(ValueLayout.ADDRESS.byteSize());
                 readerListLengthSeg.set(ValueLayout.JAVA_INT, 0,
                     readerListMultiString.getBytes(StandardCharsets.UTF_8).length);
 
@@ -337,7 +337,7 @@ class SCardLibHandleTest {
             });
     }
 
-    private void setupAvailableReaders(String... readerNames) {
+    private void setupAvailableReaders(final String... readerNames) {
         setupAvailableReaders(SCARD_S_SUCCESS, readerNames);
     }
 

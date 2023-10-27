@@ -38,8 +38,8 @@
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
     <properties>
-        <java.version>20</java.version>
-        <maven.compiler.release>20</maven.compiler.release>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -53,7 +53,6 @@
             files. These will be expanded by the maven build as soon as the resources 
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
-        <guava.version>31.1-jre</guava.version>
         <mockito.version>5.6.0</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>
         <spotbugs.plugin.version>4.7.3.6</spotbugs.plugin.version>
@@ -67,10 +66,11 @@
         <arch.unit.version>1.1.0</arch.unit.version>
         <fluffyj.version>1.13.1</fluffyj.version>
         <fluffyj-tests.version>1.7.2</fluffyj-tests.version>
-        <fluffyj-memory.version>1.7.2</fluffyj-memory.version>
+        <fluffyj-memory.version>1.8.0</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
+        <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
-            --enable-native-access=ALL-UNNAMED --enable-preview --add-opens=java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+            --enable-preview --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
     <dependencyManagement>

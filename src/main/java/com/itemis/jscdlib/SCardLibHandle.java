@@ -61,10 +61,10 @@ public final class SCardLibHandle implements AutoCloseable {
     private final ScardLibNativeBridge bridge;
     private final Arena myArena;
 
-    public SCardLibHandle(ScardLibNativeBridge bridge) {
+    public SCardLibHandle(final ScardLibNativeBridge bridge) {
         this.bridge = requireNonNull(bridge, "bridge");
 
-        myArena = Arena.openConfined();
+        myArena = Arena.ofShared();
     }
 
     /**
@@ -81,33 +81,32 @@ public final class SCardLibHandle implements AutoCloseable {
      * @throws JScdException if something went wrong.
      */
     public List<String> listReaders() {
-        List<String> result = new ArrayList<>();
+        final List<String> result = new ArrayList<>();
         var ctxEstablished = false;
         var listReadersReturned = false;
 
-        try (var listReadersArena = Arena.openConfined()) {
-            var listReadersScope = listReadersArena.scope();
-            var ctxPtrSeg = pointer().allocate(listReadersScope);
-            var readerListPtrSeg = pointer().of(String.class).allocate(listReadersScope);
+        try (var listReadersArena = Arena.ofConfined()) {
+            final var ctxPtrSeg = pointer().allocate(listReadersArena);
+            final var readerListPtrSeg = pointer().of(String.class).allocate(listReadersArena);
             MemorySegment ptrToFirstEntryInReaderList = null;
             try {
-                var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersScope);
+                final var readerListLength = segment().of(SCARD_AUTOALLOCATE).allocate(listReadersArena);
 
                 throwIfNoSuccess(
                     bridge.sCardEstablishContext(PCSC_SCOPE_SYSTEM, NULL, NULL, ctxPtrSeg.address()));
                 ctxEstablished = true;
 
-                var listReadersProblem = throwIfNoSuccess(
+                final var listReadersProblem = throwIfNoSuccess(
                     bridge.sCardListReaders(ctxPtrSeg.getValue(), SCARD_ALL_READERS, readerListPtrSeg.address(),
                         readerListLength.address()));
                 listReadersReturned = true;
                 ptrToFirstEntryInReaderList = readerListPtrSeg.getValue();
                 if (listReadersProblem != SCARD_E_NO_READERS_AVAILABLE) {
                     var currentOffset = 0;
-                    var localReaderListPtrSeg = readerListPtrSeg.rawDereference();
-                    Integer maxOffset = readerListLength.getValue() - 1;
+                    final var localReaderListPtrSeg = readerListPtrSeg.rawDereference();
+                    final Integer maxOffset = readerListLength.getValue() - 1;
                     while (currentOffset < maxOffset) {
-                        var currentReader = localReaderListPtrSeg.getUtf8String(currentOffset);
+                        final var currentReader = localReaderListPtrSeg.getUtf8String(currentOffset);
                         result.add(currentReader);
                         currentOffset += currentReader.length() + 1;
                     }
@@ -126,8 +125,8 @@ public final class SCardLibHandle implements AutoCloseable {
         return Collections.unmodifiableList(result);
     }
 
-    private JScdProblem throwIfNoSuccess(long errorCode) {
-        var problem = JScdProblems.fromError(errorCode);
+    private JScdProblem throwIfNoSuccess(final long errorCode) {
+        final var problem = JScdProblems.fromError(errorCode);
         if (!NON_FATAL_PROBLEMS.contains(problem)) {
             throw new JScdException(problem);
         }
@@ -135,18 +134,18 @@ public final class SCardLibHandle implements AutoCloseable {
         return problem;
     }
 
-    private void logIfNoSuccess(long errorCode, String errMsg) {
+    private void logIfNoSuccess(final long errorCode, final String errMsg) {
         if (errorCode != JScdProblems.SCARD_S_SUCCESS.errorCode()) {
-            var problem = JScdProblems.fromError(errorCode);
-            var logMsg = (errMsg + " Reason: %s: %s").formatted(problem, problem.description());
+            final var problem = JScdProblems.fromError(errorCode);
+            final var logMsg = (errMsg + " Reason: %s: %s").formatted(problem, problem.description());
             LOG.warn(logMsg);
         }
     }
 
-    private void safeClose(Arena arena) {
+    private void safeClose(final Arena arena) {
         try {
             arena.close();
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             LOG.warn(
                 "Possible ressource leak: Could not close arena. Reason: " + pretty(t));
         }

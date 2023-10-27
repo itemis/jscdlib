@@ -7,7 +7,6 @@ import com.itemis.fluffyj.memory.FluffyNativeMethodHandle;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentScope;
 import java.lang.foreign.SymbolLookup;
 import java.util.function.Function;
 
@@ -26,9 +25,9 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
      * @param libSup - Creates a "Connection" to the underlying native library in form of a
      *        {@link SymbolLookup}. The connection will be closed when {@link #close()} is called.
      */
-    public ScardLibNativeBridge(Function<SegmentScope, SymbolLookup> libSup) {
-        myArena = Arena.openConfined();
-        var lib = libSup.apply(myArena.scope());
+    public ScardLibNativeBridge(final Function<Arena, SymbolLookup> libSup) {
+        myArena = Arena.ofShared();
+        final var lib = libSup.apply(myArena);
 
         establishCtx = FluffyNativeMethodHandle
             .fromCLib(lib)
@@ -36,7 +35,7 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
             .func("SCardEstablishContext")
             .args(JAVA_LONG, ADDRESS, ADDRESS, ADDRESS);
 
-        var suffix = new OsDetector().isWindows() ? "A" : "";
+        final var suffix = new OsDetector().isWindows() ? "A" : "";
         listReaders = FluffyNativeMethodHandle
             .fromCLib(lib)
             .returnType(long.class)
@@ -68,8 +67,9 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    public long sCardEstablishContext(long dwScope, MemorySegment pvReserved1, MemorySegment pvReserved2,
-            MemorySegment phContext) {
+    public long sCardEstablishContext(final long dwScope, final MemorySegment pvReserved1,
+            final MemorySegment pvReserved2,
+            final MemorySegment phContext) {
         return callNativeFunction(() -> establishCtx.call(dwScope, pvReserved1, pvReserved2, phContext));
     }
 
@@ -85,8 +85,9 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    public long sCardListReaders(MemorySegment hContext, MemorySegment mszGroups, MemorySegment mszReaders,
-            MemorySegment pcchReaders) {
+    public long sCardListReaders(final MemorySegment hContext, final MemorySegment mszGroups,
+            final MemorySegment mszReaders,
+            final MemorySegment pcchReaders) {
         return callNativeFunction(() -> listReaders.call(hContext, mszGroups, mszReaders, pcchReaders));
     }
 
@@ -100,7 +101,7 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    public long sCardFreeMemory(MemorySegment hContext, MemorySegment pvMem) {
+    public long sCardFreeMemory(final MemorySegment hContext, final MemorySegment pvMem) {
         return callNativeFunction(() -> freeMem.call(hContext, pvMem));
     }
 
@@ -113,7 +114,7 @@ public final class ScardLibNativeBridge extends NativeBase implements AutoClosea
      *         "https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values">SmartCard
      *         return values</a>.
      */
-    public long sCardReleaseContext(MemorySegment hContext) {
+    public long sCardReleaseContext(final MemorySegment hContext) {
         return callNativeFunction(() -> releaseCtx.call(hContext));
     }
 

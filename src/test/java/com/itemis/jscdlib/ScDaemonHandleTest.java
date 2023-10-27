@@ -55,7 +55,7 @@ class ScDaemonHandleTest {
         bridgeMock = mock(ScDaemonNativeBridge.class);
         socketDiscoveryMock = mock(JScdEnvSocketDiscovery.class);
         invocations = new AssuanMethodInvocations();
-        testArena = Arena.openConfined();
+        testArena = Arena.ofShared();
 
         when(socketDiscoveryMock.discover()).thenReturn(Paths.get("scdaemon.socket.file"));
 
@@ -99,13 +99,13 @@ class ScDaemonHandleTest {
 
     @Test
     void constructor_throws_jscdException_if_assuan_new_fails() {
-        var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
+        final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanNewReturns(invocation -> expectedProblem.errorCode());
 
         try (var localUnderTest = constructUnderTest()) {
             Assertions.fail("No exception was thrown");
-        } catch (Exception e) {
+        } catch (final Exception e) {
             assertThat(e).as("Expected exception in case of an error in smart card native code.")
                 .isInstanceOf(JScdException.class)
                 .hasFieldOrPropertyWithValue("problem", expectedProblem);
@@ -114,13 +114,13 @@ class ScDaemonHandleTest {
 
     @Test
     void constructor_throws_jscdException_if_socket_connect_fails() {
-        var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
+        final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanSocketConnectReturns(invocation -> expectedProblem.errorCode());
 
         try (var localUnderTest = constructUnderTest()) {
             Assertions.fail("No exception was thrown");
-        } catch (Exception e) {
+        } catch (final Exception e) {
             assertThat(e).as("Expected exception in case of an error in smart card native code.")
                 .isInstanceOf(JScdException.class)
                 .hasFieldOrPropertyWithValue("problem", expectedProblem);
@@ -129,7 +129,7 @@ class ScDaemonHandleTest {
 
     @Test
     void sendCommand_happyPath() {
-        var expectedCommand = "SERIALNO";
+        final var expectedCommand = "SERIALNO";
 
         underTest.sendCommand(expectedCommand, line -> System.out.println(line), line -> System.out.println(line));
 
@@ -141,7 +141,7 @@ class ScDaemonHandleTest {
 
     @Test
     void send_command_throws_jscdException_if_transact_fails() {
-        var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
+        final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
         assuanTransactReturns(invocation -> expectedProblem.errorCode());
 
@@ -179,23 +179,23 @@ class ScDaemonHandleTest {
         String command = null;
     }
 
-    private void assuanNewReturns(Answer<Long> answer) {
+    private void assuanNewReturns(final Answer<Long> answer) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
 
         when(bridgeMock.assuanNew(any(MemorySegment.class))).thenAnswer(invocation -> {
-            var ctxPtrSegPtr = invocation.getArgument(0, MemorySegment.class);
-            var ctxSeg = segment().of("Assuan ctx lives here").allocate(testArena.scope());
-            var ctxPtrSeg =
-                MemorySegment.ofAddress(ctxPtrSegPtr.address(), ValueLayout.ADDRESS.asUnbounded().byteSize());
-            ctxPtrSeg.set(ValueLayout.ADDRESS.asUnbounded(), 0, ctxSeg.address());
+            final var ctxSeg = segment().of("Assuan ctx lives here").allocate(testArena);
+            final var ctxPtrSegPtr = invocation.getArgument(0, MemorySegment.class);
+            final var ctxPtrSeg =
+                MemorySegment.ofAddress(ctxPtrSegPtr.address()).reinterpret(ValueLayout.ADDRESS.byteSize());
+            ctxPtrSeg.set(ValueLayout.ADDRESS, 0, ctxSeg.address());
             invocations.ctx = ctxSeg.address();
             return answer.answer(invocation);
         });
     }
 
-    private void assuanSocketConnectReturns(Answer<Long> answer) {
+    private void assuanSocketConnectReturns(final Answer<Long> answer) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
@@ -205,7 +205,7 @@ class ScDaemonHandleTest {
                 .thenAnswer(answer);
     }
 
-    private void assuanTransactReturns(Answer<Long> answer) {
+    private void assuanTransactReturns(final Answer<Long> answer) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
         Mockito.mock(Object.class);
@@ -219,14 +219,14 @@ class ScDaemonHandleTest {
                 });
     }
 
-    private void assuanReleaseReturns(Answer<Void> answer) {
+    private void assuanReleaseReturns(final Answer<Void> answer) {
         // Workaround for
         // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/456
-        var stubber = Mockito.doAnswer(answer);
+        final var stubber = Mockito.doAnswer(answer);
         try {
-            var whenMethod = Stubber.class.getMethod("when", Object.class);
+            final var whenMethod = Stubber.class.getMethod("when", Object.class);
             ((ScDaemonNativeBridge) whenMethod.invoke(stubber, bridgeMock)).assuanRelease(any(MemorySegment.class));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             Assertions.fail("Could not mock call.", e);
         }
     }

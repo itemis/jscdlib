@@ -6,6 +6,7 @@ import static com.itemis.fluffyj.memory.FluffyMemory.segment;
 import static java.lang.foreign.MemorySegment.NULL;
 import static java.util.Objects.requireNonNull;
 
+import com.itemis.fluffyj.memory.FluffyMemory;
 import com.itemis.fluffyj.memory.api.FluffyPointer;
 import com.itemis.jscdlib.discovery.JScdSocketDiscovery;
 import com.itemis.jscdlib.internal.ScDaemonNativeBridge;
@@ -18,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentAllocator;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -58,20 +58,20 @@ public final class ScDaemonHandle implements AutoCloseable {
      * @param socketDiscovery Used to determine the scdaemon socket file to use for communication to
      *        the daemon.
      */
-    public ScDaemonHandle(ScDaemonNativeBridge bridge, JScdSocketDiscovery socketDiscovery) {
+    public ScDaemonHandle(final ScDaemonNativeBridge bridge, final JScdSocketDiscovery socketDiscovery) {
         this.bridge = requireNonNull(bridge, "bridge");
         requireNonNull(socketDiscovery, "socketDiscovery");
 
         try {
-            myArena = Arena.openConfined();
-            ctxPtr = pointer().allocate(myArena.scope());
+            myArena = Arena.ofShared();
+            ctxPtr = pointer().allocate(myArena);
             throwIfNoSuccess(bridge.assuanNew(ctxPtr.address()));
             ctxAddr = ctxPtr.getValue();
-            var socketName =
-                segment().of(socketDiscovery.discover().toString()).allocate(myArena.scope()).address();
+            final var socketName =
+                segment().of(socketDiscovery.discover().toString()).allocate(myArena).address();
             throwIfNoSuccess(bridge.assuanSocketConnect(ctxAddr, socketName,
                 ASSUAN_INVALID_PID, ASSUAN_SOCKET_CONNECT_FDPASSING));
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             close();
             throw t;
         }
@@ -94,15 +94,15 @@ public final class ScDaemonHandle implements AutoCloseable {
      * @param responseConsumer Called when scdaemon responds with data.
      * @param statusConsumer Called when scdaemon responds with status lines.
      */
-    public void sendCommand(String command, Consumer<String> responseConsumer, Consumer<String> statusConsumer) {
-        var callback = new TransactCallback(responseConsumer, statusConsumer);
+    public void sendCommand(final String command, final Consumer<String> responseConsumer,
+            final Consumer<String> statusConsumer) {
+        final var callback = new TransactCallback(responseConsumer, statusConsumer);
 
-        try (var transactArena = Arena.openConfined()) {
-            var transactScope = transactArena.scope();
-            var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactScope);
-            var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactScope);
-            var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactScope);
-            var cmdAddr = SegmentAllocator.nativeAllocator(transactScope).allocateUtf8String(command);
+        try (var transactArena = Arena.ofConfined()) {
+            final var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactArena);
+            final var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactArena);
+            final var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactArena);
+            final var cmdAddr = transactArena.allocateUtf8String(command);
             throwIfNoSuccess(
                 bridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
                     statusCbPtr, NULL));
@@ -120,7 +120,7 @@ public final class ScDaemonHandle implements AutoCloseable {
                 if (myArena.scope().isAlive()) {
                     try {
                         bridge.assuanRelease(ctxAddr);
-                    } catch (Throwable t) {
+                    } catch (final Throwable t) {
                         LOG.warn(
                             "Possible ressource leak: Operation assuanRelease could not release assuan context. Reason: "
                                 + pretty(t));
@@ -137,8 +137,8 @@ public final class ScDaemonHandle implements AutoCloseable {
         }
     }
 
-    private JScdProblem throwIfNoSuccess(long errorCode) {
-        var problem = JScdProblems.fromError(errorCode);
+    private JScdProblem throwIfNoSuccess(final long errorCode) {
+        final var problem = JScdProblems.fromError(errorCode);
         if (!NON_FATAL_PROBLEMS.contains(problem)) {
             throw new JScdException(problem);
         }
@@ -152,23 +152,27 @@ public final class ScDaemonHandle implements AutoCloseable {
         private final Consumer<String> responseConsumer;
         private final Consumer<String> statusConsumer;
 
-        public TransactCallback(Consumer<String> responseConsumer, Consumer<String> statusConsumer) {
+        public TransactCallback(final Consumer<String> responseConsumer, final Consumer<String> statusConsumer) {
             this.responseConsumer = responseConsumer;
             this.statusConsumer = statusConsumer;
         }
 
-        public int data_cb(MemorySegment allLines, MemorySegment currentLine, long lineLength) {
-            responseConsumer.accept(currentLine.getUtf8String(0));
+        public int data_cb(final MemorySegment allLines, final MemorySegment currentLinePtr, final long lineLength) {
+            responseConsumer.accept(deref(currentLinePtr));
             return SUCCESS;
         }
 
-        public int inquire_cb(MemorySegment allLines, MemorySegment currentLine) {
+        public int inquire_cb(final MemorySegment allLines, final MemorySegment currentLinePtr) {
             return SUCCESS;
         }
 
-        public int status_cb(MemorySegment allLines, MemorySegment currentLine) {
-            statusConsumer.accept(currentLine.getUtf8String(0));
+        public int status_cb(final MemorySegment allLines, final MemorySegment currentLinePtr) {
+            statusConsumer.accept(deref(currentLinePtr));
             return SUCCESS;
+        }
+
+        private String deref(final MemorySegment strPtr) {
+            return FluffyMemory.dereference(strPtr).as(String.class);
         }
     }
 }
