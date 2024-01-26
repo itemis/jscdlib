@@ -23,6 +23,8 @@ public final class OsDetector {
         return !isWindows() && !isLinux() && !isMac();
     }
 
+    // Can't do anything about JDK lacking null checks
+    @SuppressWarnings("null")
     private String getSanitizedOsName() {
         return nullToEmpty(System.getProperty("os.name")).toLowerCase().trim();
     }
