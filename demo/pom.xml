@@ -8,12 +8,12 @@
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
-        <version>5.8.2</version>
+        <version>5.8.3</version>
         <relativePath></relativePath>
     </parent>
 
     <artifactId>jscdlib.demo</artifactId>
-    <version>1.10.1</version>
+    <version>1.10.2</version>
 
     <name>jScdLib Demo</name>
     <description>Demonstration of jScdLib</description>
@@ -63,12 +63,12 @@
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
-        <spotbugs.plugin.version>4.8.1.0</spotbugs.plugin.version>
-        <git-commit-id-plugin.version>7.0.0</git-commit-id-plugin.version>
-        <logback.version>1.4.13</logback.version>
-        <jscdlib.version>0.10.1</jscdlib.version>
+        <spotbugs.plugin.version>4.8.3.1</spotbugs.plugin.version>
+        <git-commit-id-plugin.version>8.0.1</git-commit-id-plugin.version>
+        <logback.version>1.5.3</logback.version>
+        <jscdlib.version>0.10.2</jscdlib.version>
     </properties>
 
     <dependencyManagement>
