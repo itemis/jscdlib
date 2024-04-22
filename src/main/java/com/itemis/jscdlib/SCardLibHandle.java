@@ -106,7 +106,7 @@ public final class SCardLibHandle implements AutoCloseable {
                     final var localReaderListPtrSeg = readerListPtrSeg.rawDereference();
                     final Integer maxOffset = readerListLength.getValue() - 1;
                     while (currentOffset < maxOffset) {
-                        final var currentReader = localReaderListPtrSeg.getUtf8String(currentOffset);
+                        final var currentReader = localReaderListPtrSeg.getString(currentOffset);
                         result.add(currentReader);
                         currentOffset += currentReader.length() + 1;
                     }

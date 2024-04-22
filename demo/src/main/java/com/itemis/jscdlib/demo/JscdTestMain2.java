@@ -59,8 +59,8 @@ public class JscdTestMain2 {
             scardListReaders.call(hContext, NULL_PTR, mszReaders.address(), pcchReaders);
 
             final var readersMultiStrPtr = mszReaders.rawDereference();
-            final var readerOne = readersMultiStrPtr.getUtf8String(0);
-            final var readerTwo = readersMultiStrPtr.getUtf8String(readerOne.length() + 1L);
+            final var readerOne = readersMultiStrPtr.getString(0);
+            final var readerTwo = readersMultiStrPtr.getString(readerOne.length() + 1L);
 
             System.err.println(readerOne);
             System.err.println(readerTwo);

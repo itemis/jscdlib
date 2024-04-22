@@ -214,7 +214,7 @@ class ScDaemonHandleTest {
             any(MemorySegment.class),
             any(MemorySegment.class), any(MemorySegment.class), any(MemorySegment.class), any(MemorySegment.class)))
                 .thenAnswer(invocation -> {
-                    invocations.command = invocation.getArgument(1, MemorySegment.class).getUtf8String(0);
+                    invocations.command = invocation.getArgument(1, MemorySegment.class).getString(0);
                     return answer.answer(invocation);
                 });
     }

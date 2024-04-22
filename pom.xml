@@ -38,8 +38,8 @@
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
     <properties>
-        <java.version>21</java.version>
-        <maven.compiler.release>21</maven.compiler.release>
+        <java.version>22</java.version>
+        <maven.compiler.release>22</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -65,11 +65,11 @@
         <arch.unit.version>1.2.1</arch.unit.version>
         <fluffyj.version>1.13.4</fluffyj.version>
         <fluffyj-tests.version>1.7.5</fluffyj-tests.version>
-        <fluffyj-memory.version>1.8.3</fluffyj-memory.version>
+        <fluffyj-memory.version>1.9.0</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
-            --enable-preview --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+            --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
     <dependencyManagement>
@@ -293,11 +293,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>${maven-compiler-plugin.version}</version>
-                    <configuration>
-                        <compilerArgs>
-                            <compilerArg>--enable-preview</compilerArg>
-                        </compilerArgs>
-                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -385,9 +380,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <additionalOptions>
-                        <option>--enable-preview</option>
-                    </additionalOptions>
                     <doclint>-missing</doclint>
                     <quiet>true</quiet>
                 </configuration>
