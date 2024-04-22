@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
-        <version>5.8.3</version>
+        <version>5.8.4</version>
     </parent>
     <artifactId>jscdlib</artifactId>
-    <version>0.10.2</version>
+    <version>0.10.3</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -46,7 +46,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-        <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <build.timestamp.formatted>${maven.build.timestamp}</build.timestamp.formatted>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm.ssZ</maven.build.timestamp.format>
         <!-- Make sure we can use variables like ${variable.name} in resource 
@@ -55,17 +55,17 @@
         <resource.delimiter>${*}</resource.delimiter>
         <mockito.version>5.11.0</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <spotbugs.plugin.version>4.8.3.1</spotbugs.plugin.version>
+        <spotbugs.plugin.version>4.8.4.0</spotbugs.plugin.version>
         <junit.version>5.10.2</junit.version>
-        <jacoco.plugin.version>0.8.11</jacoco.plugin.version>
-        <git-commit-id-plugin.version>8.0.1</git-commit-id-plugin.version>
+        <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
+        <git-commit-id-plugin.version>8.0.2</git-commit-id-plugin.version>
         <assertj.version>3.25.3</assertj.version>
-        <logback.version>1.5.3</logback.version>
+        <logback.version>1.5.6</logback.version>
         <awaitility.version>4.2.0</awaitility.version>
         <arch.unit.version>1.2.1</arch.unit.version>
-        <fluffyj.version>1.13.3</fluffyj.version>
-        <fluffyj-tests.version>1.7.4</fluffyj-tests.version>
-        <fluffyj-memory.version>1.8.2</fluffyj-memory.version>
+        <fluffyj.version>1.13.4</fluffyj.version>
+        <fluffyj-tests.version>1.7.5</fluffyj-tests.version>
+        <fluffyj-memory.version>1.8.3</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
