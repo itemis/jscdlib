@@ -7,7 +7,7 @@
         <version>5.8.4</version>
     </parent>
     <artifactId>jscdlib</artifactId>
-    <version>0.10.3-SNAPSHOT</version>
+    <version>0.10.3</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
