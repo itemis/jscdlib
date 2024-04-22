@@ -10,7 +10,7 @@ Building with Maven >= 3.8.4 is recommended. Java 22 is required in order for th
 This demo requires Java 22.  
 
 ```
-java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.0-shaded.jar
+java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.1-SNAPSHOT-shaded.jar
 ```
 
 # Known Issues
