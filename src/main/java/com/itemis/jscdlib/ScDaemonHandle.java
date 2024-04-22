@@ -102,7 +102,7 @@ public final class ScDaemonHandle implements AutoCloseable {
             final var dataCbPtr = pointer().toCFunc("data_cb").of(callback).autoBindTo(transactArena);
             final var inquireCbPtr = pointer().toCFunc("inquire_cb").of(callback).autoBindTo(transactArena);
             final var statusCbPtr = pointer().toCFunc("status_cb").of(callback).autoBindTo(transactArena);
-            final var cmdAddr = transactArena.allocateUtf8String(command);
+            final var cmdAddr = transactArena.allocateFrom(command);
             throwIfNoSuccess(
                 bridge.assuanTransact(ctxAddr, cmdAddr, dataCbPtr, NULL, inquireCbPtr, NULL,
                     statusCbPtr, NULL));

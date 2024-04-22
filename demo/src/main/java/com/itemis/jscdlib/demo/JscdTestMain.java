@@ -27,8 +27,8 @@ public class JscdTestMain {
                 mszReaders.address(), pcchReaders));
 
             final var addr = mszReaders.rawDereference();
-            final var rd1 = addr.getUtf8String(0);
-            final var rd2 = addr.getUtf8String(rd1.length() + 1L);
+            final var rd1 = addr.getString(0);
+            final var rd2 = addr.getString(rd1.length() + 1L);
 
             System.err.println(rd1);
             System.err.println(rd2);

@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>jscdlib.demo</artifactId>
-    <version>1.10.3</version>
+    <version>1.11.0</version>
 
     <name>jScdLib Demo</name>
     <description>Demonstration of jScdLib</description>
@@ -50,8 +50,8 @@
     </scm>
 
     <properties>
-        <java.version>21</java.version>
-        <maven.compiler.release>21</maven.compiler.release>
+        <java.version>22</java.version>
+        <maven.compiler.release>22</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -68,7 +68,7 @@
         <spotbugs.plugin.version>4.8.4.0</spotbugs.plugin.version>
         <git-commit-id-plugin.version>8.0.2</git-commit-id-plugin.version>
         <logback.version>1.5.6</logback.version>
-        <jscdlib.version>0.10.3</jscdlib.version>
+        <jscdlib.version>0.11.0</jscdlib.version>
     </properties>
 
     <dependencyManagement>
