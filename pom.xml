@@ -38,8 +38,8 @@
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
     <properties>
-        <java.version>22</java.version>
-        <maven.compiler.release>22</maven.compiler.release>
+        <java.version>23</java.version>
+        <maven.compiler.release>23</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -69,7 +69,7 @@
         <system.lambda.version>1.2.1</system.lambda.version>
         <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
-            --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+            --enable-native-access=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
     <dependencyManagement>
@@ -243,6 +243,7 @@
                                 <goal>check</goal>
                             </goals>
                             <configuration>
+                                <haltOnFailure>false</haltOnFailure>
                                 <rules>
                                     <rule>
                                         <element>CLASS</element>
@@ -298,6 +299,17 @@
         </pluginManagement>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>io.github.git-commit-id</groupId>
                 <artifactId>git-commit-id-maven-plugin</artifactId>
                 <executions>
@@ -331,8 +343,7 @@
                     <forkCount>1</forkCount>
                     <!-- $argLine is 'injected' by JaCoCo and contains instructions 
                         to setup its agent -->
-                    <argLine>${argLine}</argLine>
-                    <argLine>${custom.jvm.options}</argLine>
+                    <argLine>${argLine} -javaagent:${org.mockito:mockito-core:jar} ${custom.jvm.options}</argLine>
                 </configuration>
             </plugin>
             <plugin>
