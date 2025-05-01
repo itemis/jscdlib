@@ -53,7 +53,7 @@
             files. These will be expanded by the maven build as soon as the resources 
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
-        <mockito.version>5.16.1</mockito.version>
+        <mockito.version>5.17.0</mockito.version>
         <hamcrest.version>3.0</hamcrest.version>
         <spotbugs.plugin.version>4.9.3.0</spotbugs.plugin.version>
         <junit.version>5.12.1</junit.version>
