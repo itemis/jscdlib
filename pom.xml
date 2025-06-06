@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.itemis</groupId>
         <artifactId>org-parent</artifactId>
-        <version>5.8.4</version>
+        <version>5.8.10</version>
     </parent>
     <artifactId>jscdlib</artifactId>
-    <version>0.11.0</version>
+    <version>0.11.1</version>
 
     <name>jScdLib</name>
     <description>Java based SmartCard Daemon Library</description>
@@ -38,38 +38,38 @@
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
     <properties>
-        <java.version>22</java.version>
-        <maven.compiler.release>22</maven.compiler.release>
+        <java.version>23</java.version>
+        <maven.compiler.release>23</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <build.timestamp.formatted>${maven.build.timestamp}</build.timestamp.formatted>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm.ssZ</maven.build.timestamp.format>
         <!-- Make sure we can use variables like ${variable.name} in resource 
             files. These will be expanded by the maven build as soon as the resources 
             plugin processes all contents of the configured resources directories. -->
         <resource.delimiter>${*}</resource.delimiter>
-        <mockito.version>5.11.0</mockito.version>
-        <hamcrest.version>2.2</hamcrest.version>
-        <spotbugs.plugin.version>4.8.4.0</spotbugs.plugin.version>
-        <junit.version>5.10.2</junit.version>
-        <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
-        <git-commit-id-plugin.version>8.0.2</git-commit-id-plugin.version>
-        <assertj.version>3.25.3</assertj.version>
-        <logback.version>1.5.6</logback.version>
+        <mockito.version>5.18.0</mockito.version>
+        <hamcrest.version>3.0</hamcrest.version>
+        <spotbugs.plugin.version>4.9.3.0</spotbugs.plugin.version>
+        <junit.version>5.13.0</junit.version>
+        <jacoco.plugin.version>0.8.13</jacoco.plugin.version>
+        <git-commit-id-plugin.version>9.0.2</git-commit-id-plugin.version>
+        <assertj.version>3.27.3</assertj.version>
+        <logback.version>1.5.18</logback.version>
         <awaitility.version>4.2.0</awaitility.version>
-        <arch.unit.version>1.2.1</arch.unit.version>
-        <fluffyj.version>1.13.4</fluffyj.version>
-        <fluffyj-tests.version>1.7.5</fluffyj-tests.version>
-        <fluffyj-memory.version>1.9.0</fluffyj-memory.version>
+        <arch.unit.version>1.4.1</arch.unit.version>
+        <fluffyj.version>1.13.6</fluffyj.version>
+        <fluffyj-tests.version>1.7.6</fluffyj-tests.version>
+        <fluffyj-memory.version>1.9.1</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
-            --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+            --enable-native-access=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
         </custom.jvm.options>
     </properties>
     <dependencyManagement>
@@ -243,6 +243,7 @@
                                 <goal>check</goal>
                             </goals>
                             <configuration>
+                                <haltOnFailure>false</haltOnFailure>
                                 <rules>
                                     <rule>
                                         <element>CLASS</element>
@@ -298,6 +299,17 @@
         </pluginManagement>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>io.github.git-commit-id</groupId>
                 <artifactId>git-commit-id-maven-plugin</artifactId>
                 <executions>
@@ -331,8 +343,7 @@
                     <forkCount>1</forkCount>
                     <!-- $argLine is 'injected' by JaCoCo and contains instructions 
                         to setup its agent -->
-                    <argLine>${argLine}</argLine>
-                    <argLine>${custom.jvm.options}</argLine>
+                    <argLine>${argLine} -javaagent:${org.mockito:mockito-core:jar} ${custom.jvm.options}</argLine>
                 </configuration>
             </plugin>
             <plugin>

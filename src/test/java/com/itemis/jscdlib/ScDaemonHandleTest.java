@@ -38,7 +38,7 @@ import java.nio.file.Paths;
 
 class ScDaemonHandleTest {
 
-    private static final Answer<Long> SUCCESS = invocation -> JScdProblems.SCARD_S_SUCCESS.errorCode();
+    private static final Answer<Long> SUCCESS = _ -> JScdProblems.SCARD_S_SUCCESS.errorCode();
 
     @RegisterExtension
     FluffyTestAppender logAssert = new FluffyTestAppender();
@@ -101,9 +101,9 @@ class ScDaemonHandleTest {
     void constructor_throws_jscdException_if_assuan_new_fails() {
         final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
-        assuanNewReturns(invocation -> expectedProblem.errorCode());
+        assuanNewReturns(_ -> expectedProblem.errorCode());
 
-        try (var localUnderTest = constructUnderTest()) {
+        try (var _ = constructUnderTest()) {
             Assertions.fail("No exception was thrown");
         } catch (final Exception e) {
             assertThat(e).as("Expected exception in case of an error in smart card native code.")
@@ -116,9 +116,9 @@ class ScDaemonHandleTest {
     void constructor_throws_jscdException_if_socket_connect_fails() {
         final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
-        assuanSocketConnectReturns(invocation -> expectedProblem.errorCode());
+        assuanSocketConnectReturns(_ -> expectedProblem.errorCode());
 
-        try (var localUnderTest = constructUnderTest()) {
+        try (var _ = constructUnderTest()) {
             Assertions.fail("No exception was thrown");
         } catch (final Exception e) {
             assertThat(e).as("Expected exception in case of an error in smart card native code.")
@@ -143,7 +143,7 @@ class ScDaemonHandleTest {
     void send_command_throws_jscdException_if_transact_fails() {
         final var expectedProblem = JScdProblems.SCARD_E_NO_MEMORY;
 
-        assuanTransactReturns(invocation -> expectedProblem.errorCode());
+        assuanTransactReturns(_ -> expectedProblem.errorCode());
 
         assertThatThrownBy(() -> underTest.sendCommand("command", System.out::println, System.out::println))
             .as("Expected exception in case of an error in smart card native code.")
@@ -153,7 +153,7 @@ class ScDaemonHandleTest {
 
     @Test
     void errors_during_release_ctx_are_logged_no_exception_is_thrown() {
-        assuanReleaseReturns(invocation -> {
+        assuanReleaseReturns(_ -> {
             throw EXPECTED_CHECKED_EXCEPTION;
         });
 

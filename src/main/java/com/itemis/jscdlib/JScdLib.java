@@ -43,7 +43,7 @@ public final class JScdLib {
         }
     }
 
-    private static final Set<String> LINUX_SCDAEMON_LIB_CANDIDATES = Set.of("libassuan6-0", "libassuan.so");
+    private static final Set<String> LINUX_SCDAEMON_LIB_CANDIDATES = Set.of("libassuan-9", "libassuan.so");
     // See
     // https://github.com/gpg/gnupg/blob/25ae80b8eb6e9011049d76440ad7d250c1d02f7c/scd/scdaemon.c#L210
     private static final Set<String> LINUX_SCARD_LIB_CANDIDATES = Set.of("libpcsclite.so.1", "libpcsclite.so");
@@ -97,7 +97,7 @@ public final class JScdLib {
         ScDaemonNativeBridge bridge = null;
 
         if (IS_WINDOWS) {
-            bridge = new ScDaemonNativeBridge(arena -> libraryLookup("libassuan6-0", arena));
+            bridge = new ScDaemonNativeBridge(arena -> libraryLookup("libassuan-9", arena));
         } else if (IS_MAC) {
             bridge = new ScDaemonNativeBridge(arena -> libraryLookup("libassuan", arena));
         } else {

@@ -2,19 +2,19 @@
 Demonstration of jScdLib.
 
 # Build
-Building with Maven >= 3.8.4 is recommended. Java 22 is required in order for the build to finish successful.  
+Building with Maven >= 3.8.4 is recommended. Java 23 is required in order for the build to finish successful.  
   
 `mvn clean install`
 
 # Run
-This demo requires Java 22.  
+This demo requires Java 23.  
 
 ```
-java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.0-shaded.jar
+java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.1-shaded.jar
 ```
 
 # Known Issues
-## Could not find library libassuan6-0.dll on Windows
+## Could not find library libassuan-9.dll on Windows
 
 * You need a recent installation of [gpg4win](https://gpg4win.de)
 * Add `<GPG_HOME>/bin_64` to your system's `PATH` variable
