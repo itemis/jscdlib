@@ -61,7 +61,7 @@
         <git-commit-id-plugin.version>9.0.2</git-commit-id-plugin.version>
         <assertj.version>3.27.3</assertj.version>
         <logback.version>1.5.18</logback.version>
-        <awaitility.version>4.2.0</awaitility.version>
+        <awaitility.version>4.3.0</awaitility.version>
         <arch.unit.version>1.4.1</arch.unit.version>
         <fluffyj.version>1.13.6</fluffyj.version>
         <fluffyj-tests.version>1.7.6</fluffyj-tests.version>
@@ -362,7 +362,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- For warnings about illegal reflective access see https://issues.apache.org/jira/browse/GROOVY-8339 -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
@@ -376,6 +375,9 @@
                 </executions>
                 <configuration>
                     <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                    <skipEmptyReport>true</skipEmptyReport>
+                    <xmlOutput>false</xmlOutput>
+                    <htmlOutput>false</htmlOutput>
                 </configuration>
             </plugin>
             <plugin>
