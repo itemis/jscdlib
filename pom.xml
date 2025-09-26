@@ -38,8 +38,8 @@
         <url>https://github.com/itemis/jscdlib</url>
     </scm>
     <properties>
-        <java.version>23</java.version>
-        <maven.compiler.release>23</maven.compiler.release>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -65,7 +65,7 @@
         <arch.unit.version>1.4.1</arch.unit.version>
         <fluffyj.version>1.13.6</fluffyj.version>
         <fluffyj-tests.version>1.7.6</fluffyj-tests.version>
-        <fluffyj-memory.version>1.9.1</fluffyj-memory.version>
+        <fluffyj-memory.version>1.9.2-SNAPSHOT</fluffyj-memory.version>
         <system.lambda.version>1.2.1</system.lambda.version>
         <!-- Keep bytebuddy experimental prop until Mockito or ByteBuddy are fully compatible to Java 21 -->
         <custom.jvm.options>
