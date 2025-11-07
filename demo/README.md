@@ -2,15 +2,15 @@
 Demonstration of jScdLib.
 
 # Build
-Building with Maven >= 3.8.4 is recommended. Java 23 is required in order for the build to finish successful.  
+Building with Maven >= 3.8.4 is recommended. Java 25 is required in order for the build to finish successful.  
   
 `mvn clean install`
 
 # Run
-This demo requires Java 23.  
+This demo requires Java 25.  
 
 ```
-java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.1-shaded.jar
+java --enable-native-access=ALL-UNNAMED -jar target/jscdlib.demo-1.11.2-shaded.jar
 ```
 
 # Known Issues
